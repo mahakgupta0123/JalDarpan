@@ -31,7 +31,7 @@ def groundwater():
     }
 
     try:
-        response = requests.post(url, data=payload, timeout=30)  # increased timeout
+        response = requests.post(url, data=payload, timeout=90)  # increased timeout
         response.raise_for_status()
         data = response.json().get("data", [])
         return jsonify({"status": "success", "records": len(data), "data": data})
