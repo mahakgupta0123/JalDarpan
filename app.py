@@ -12,7 +12,7 @@ from tensorflow.keras.layers import LSTM, Dense
 import shap
 
 def fetch_groundwater_data(state, district, agency, startdate, enddate, size=500):
-    url = "jaldarpan-h6gyhygec4b9hndw.centralindia-01.azurewebsites.net"
+    url = "https://jaldarpan-h6gyhygec4b9hndw.centralindia-01.azurewebsites.net/groundwater"
     payload = {
         "stateName": state,
         "districtName": district,
@@ -25,8 +25,8 @@ def fetch_groundwater_data(state, district, agency, startdate, enddate, size=500
     }
 
     try:
-        st.info("Fetching live data from IndiaWRIS API...")
-        response = requests.post(url, data=payload, timeout=10) 
+        st.info("Fetching live data from Azure API...")
+        response = requests.post(url, json=payload, timeout=20)  # use json=payload
         if response.status_code == 200:
             data = response.json().get("data", [])
             if not data:
@@ -42,7 +42,7 @@ def fetch_groundwater_data(state, district, agency, startdate, enddate, size=500
     except Exception as e:
         st.warning(f"Could not fetch live data. Using cached data instead. ({e})")
         try:
-            cached_file = "cached_groundwater_data.csv" 
+            cached_file = "cached_groundwater_data.csv"
             df = pd.read_csv(cached_file)
             st.success(f"Loaded {len(df)} records from cached data.")
             return df
