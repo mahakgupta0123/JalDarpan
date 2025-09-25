@@ -26,7 +26,7 @@ def fetch_groundwater_data(state, district, agency, startdate, enddate, size=500
 
     try:
         st.info("Fetching live data from IndiaWRIS API...")
-        response = requests.post(url, data=payload, timeout=10) 
+        response = requests.post(url, data=payload, timeout=90) 
         if response.status_code == 200:
             data = response.json().get("data", [])
             if not data:
