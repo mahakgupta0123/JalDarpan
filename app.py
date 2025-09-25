@@ -12,7 +12,7 @@ from tensorflow.keras.layers import LSTM, Dense
 import shap
 
 def fetch_groundwater_data(state, district, agency, startdate, enddate, size=500):
-    url = "http://jaldarpan-h6gyhygec4b9hndw.centralindia-01.azurewebsites.net/"
+    url = "http://jaldarpan-h6gyhygec4b9hndw.centralindia-01.azurewebsites.net/groundwater"
     payload = {
         "stateName": state,
         "districtName": district,
