@@ -10,81 +10,68 @@ from xgboost import XGBRegressor
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import LSTM, Dense
 import shap
+import os
 
 def fetch_groundwater_data(state, district, agency, startdate, enddate, size=500):
-    url = "http://jaldarpan-h6gyhygec4b9hndw.centralindia-01.azurewebsites.net/groundwater"
-    payload = {
-        "stateName": state,
-        "districtName": district,
-        "agencyName": agency,
-        "startdate": startdate,
-        "enddate": enddate,
-        "download": "false",
-        "page": 0,
-        "size": size
-    }
-
+    # Call Flask proxy endpoint
+    flask_url = f"https://jaldarpan-flask.azurewebsites.net/groundwater?state={state}&district={district}&agency={agency}&startdate={startdate}&enddate={enddate}&size={size}"
     try:
-        st.info("Fetching live data from IndiaWRIS API...")
-        response = requests.post(url, data=payload, timeout=90) 
-        if response.status_code == 200:
-            data = response.json().get("data", [])
-            if not data:
-                st.warning("API returned empty data. Using cached data instead.")
-                raise ValueError("Empty API response")
-            df = pd.DataFrame(data)
-            st.success(f"Fetched {len(df)} records from API.")
-            st.write("Columns from API:", df.columns.tolist())
-            return df
-        else:
-            st.error(f"Error {response.status_code}: {response.text}")
-            raise ValueError(f"API error {response.status_code}")
+        st.info("Fetching live data from Flask proxy...")
+        response = requests.get(flask_url, timeout=20)
+        response.raise_for_status()
+        json_data = response.json()
+        if json_data.get("status") != "success":
+            raise ValueError(json_data.get("message", "Flask error"))
+        data = json_data.get("data", [])
+        if not data:
+            st.warning("Flask returned empty data. Using cached data instead.")
+            raise ValueError("Empty API response")
+        df = pd.DataFrame(data)
+        st.success(f"Fetched {len(df)} records from Flask proxy.")
+        st.write("Columns from API:", df.columns.tolist())
+        return df
     except Exception as e:
-        st.warning(f"Could not fetch live data. Using cached data instead. ({e})")
+        st.warning(f"Could not fetch from Flask. Using cached data instead. ({e})")
         try:
-            cached_file = "cached_groundwater_data.csv" 
-            df = pd.read_csv(cached_file)
-            st.success(f"Loaded {len(df)} records from cached data.")
-            return df
+            cached_file = "cached_groundwater_data.csv"
+            if os.path.exists(cached_file):
+                df = pd.read_csv(cached_file)
+                st.success(f"Loaded {len(df)} records from cached data.")
+                return df
+            else:
+                st.error("Cached file not found.")
+                return None
         except Exception as e2:
             st.error(f"Failed to load cached data: {e2}")
             return None
-
 
 def preprocess_data(df):
     df = df[['dataTime', 'dataValue']].copy()
     df = df.dropna(subset=['dataTime', 'dataValue'])
     
-   
     df['date'] = pd.to_datetime(df['dataTime'])
     df['groundwater_level'] = pd.to_numeric(df['dataValue'], errors='coerce')
     df = df.dropna(subset=['groundwater_level'])
     df = df.sort_values('date')
     df.set_index('date', inplace=True)
 
-   
     for lag in range(1, 6):
         df[f'lag{lag}'] = df['groundwater_level'].shift(lag)
 
-   
     df['rolling7'] = df['groundwater_level'].rolling(7, min_periods=1).mean()
     df['rolling30'] = df['groundwater_level'].rolling(30, min_periods=1).mean()
     df['rolling7_std'] = df['groundwater_level'].rolling(7, min_periods=1).std()
     df['rolling30_std'] = df['groundwater_level'].rolling(30, min_periods=1).std()
 
-
     df['diff1'] = df['groundwater_level'].diff(1)
     df['diff2'] = df['groundwater_level'].diff(2)
 
-   
     df['month'] = df.index.month
     df['weekofyear'] = df.index.isocalendar().week.astype(int)
 
-   
     df = df.dropna()
     
     return df
-
 
 def train_and_evaluate_models(df):
     feature_cols = ['lag1','lag2','lag3','lag4','lag5',
@@ -97,7 +84,6 @@ def train_and_evaluate_models(df):
         st.warning("Not enough data to train models. Increase date range or check API response.")
         return None, None, None, None, None, None, None
 
-    
     train_size = int(0.8 * len(X))
     X_train, X_test = X[:train_size], X[train_size:]
     y_train, y_test = y[:train_size], y[train_size:]
@@ -119,7 +105,6 @@ def train_and_evaluate_models(df):
         "Parameters": rf.get_params()
     }
 
-   
     xgb = XGBRegressor(
         n_estimators=400,
         learning_rate=0.05,
@@ -137,7 +122,6 @@ def train_and_evaluate_models(df):
         "Parameters": xgb.get_params()
     }
 
-   
     X_lstm = np.array(X).reshape((len(X), X.shape[1], 1))
     y_lstm = np.array(y)
     X_train_lstm, X_test_lstm = X_lstm[:train_size], X_lstm[train_size:]
@@ -163,8 +147,6 @@ def train_and_evaluate_models(df):
 
     return results, y_test, pred_rf, pred_xgb, pred_lstm, rf, xgb
 
-
-
 def explain_models_dynamic(results):
     for model_name, metrics in results.items():
         st.markdown(f"#### {model_name} Model")
@@ -189,12 +171,10 @@ def explain_models_dynamic(results):
             else:
                 st.info("ℹ️ Model performance is moderate; may require improvement.")
 
-
 def explainable_ai(model, X_train, model_name):
     st.subheader(f"🔍 Explainable AI for {model_name}")
     
     if model_name in ["Random Forest", "XGBoost"]:
-        # Use interventional mode and disable strict additivity check
         explainer = shap.TreeExplainer(model, feature_perturbation='interventional')
         shap_values = explainer.shap_values(X_train, check_additivity=False)
 
