@@ -375,6 +375,91 @@ def render_methodology_cards(featured, feature_cols, trained):
     st.dataframe(summary, use_container_width=True, hide_index=True)
 
 
+def describe_groundwater_status(featured, forecast_df):
+    latest_level = float(featured["groundwater_level"].iloc[-1])
+    recent_window = featured["groundwater_level"].tail(min(14, len(featured)))
+    recent_change = float(recent_window.iloc[-1] - recent_window.iloc[0]) if len(recent_window) > 1 else 0.0
+    next_forecast = float(forecast_df["forecast"].iloc[0]) if forecast_df is not None and not forecast_df.empty else np.nan
+    anomaly_rate = float(featured["anomaly_flag"].mean() * 100)
+
+    if recent_change > 0.5:
+        trend_text = "The recent pattern is moving upward, which usually means groundwater depth is increasing and conditions are becoming less favorable."
+    elif recent_change < -0.5:
+        trend_text = "The recent pattern is moving downward, which usually means groundwater depth is falling and conditions are improving."
+    else:
+        trend_text = "The recent pattern is mostly stable, so groundwater conditions are not changing sharply right now."
+
+    if np.isfinite(next_forecast):
+        if next_forecast > latest_level:
+            forecast_text = "The short-term forecast suggests the level may rise further, so the next few days should be watched carefully."
+        elif next_forecast < latest_level:
+            forecast_text = "The short-term forecast suggests a small improvement compared with the latest observed level."
+        else:
+            forecast_text = "The short-term forecast is close to the current level, which indicates stability."
+    else:
+        forecast_text = "A short-term forecast is not available because the model could not generate enough future steps."
+
+    if anomaly_rate >= 10:
+        anomaly_text = "The anomaly rate is high, which means the series contains several unusual readings that should be checked before drawing a strong conclusion."
+    elif anomaly_rate >= 5:
+        anomaly_text = "The anomaly rate is moderate, so the data looks mostly normal but still has a few unusual points."
+    else:
+        anomaly_text = "The anomaly rate is low, so the recent data looks fairly consistent."
+
+    status_score = recent_change + (next_forecast - latest_level if np.isfinite(next_forecast) else 0.0)
+    if status_score > 1.0:
+        status_label = "Stress increasing"
+    elif status_score < -1.0:
+        status_label = "Condition improving"
+    else:
+        status_label = "Broadly stable"
+
+    return {
+        "status_label": status_label,
+        "latest_level": latest_level,
+        "recent_change": recent_change,
+        "next_forecast": next_forecast,
+        "anomaly_rate": anomaly_rate,
+        "trend_text": trend_text,
+        "forecast_text": forecast_text,
+        "anomaly_text": anomaly_text,
+    }
+
+
+def describe_xai_meaning(feature_cols, shap_values):
+    importance = pd.Series(np.abs(shap_values).mean(axis=0), index=feature_cols).sort_values(ascending=False)
+    top_features = importance.head(5)
+
+    if len(top_features) == 0:
+        summary_text = "The explanation layer could not identify clear drivers for this sample."
+    else:
+        readable_names = []
+        for feature_name in top_features.index:
+            if feature_name.startswith("lag_"):
+                readable_names.append(f"recent history ({feature_name.replace('_', ' ')})")
+            elif feature_name.startswith("rolling_"):
+                readable_names.append(f"short-term average or variability ({feature_name.replace('_', ' ')})")
+            elif feature_name in {"month", "dayofyear", "weekday", "is_monsoon"}:
+                readable_names.append(f"seasonality and calendar effects ({feature_name.replace('_', ' ')})")
+            else:
+                readable_names.append(feature_name.replace("_", " "))
+
+        summary_text = (
+            "The model is mainly paying attention to "
+            + ", ".join(readable_names[:3])
+            + ". This means the forecast is driven more by recent groundwater behavior and seasonality than by a single isolated reading."
+        )
+
+    return {
+        "top_features": top_features,
+        "summary_text": summary_text,
+        "plain_language": (
+            "Positive SHAP impact pushes the prediction toward deeper groundwater, while negative SHAP impact pulls it toward a shallower level. "
+            "In simple words, SHAP shows which past water-level patterns and seasonal signals are making the model predict a rise or fall."
+        ),
+    }
+
+
 def render_confusion_matrix_panel(trained):
     st.subheader("Regime-based confusion matrix")
     st.caption("Because the target is continuous, the dashboard converts groundwater levels into Low / Moderate / High regimes using train-set quantiles, then compares predicted regimes against actual regimes.")
@@ -401,6 +486,42 @@ def render_confusion_matrix_panel(trained):
     regime_accuracy = trained["metrics"]["Regime Acc"].rename("Regime Acc")
     st.write("Regime accuracy by model")
     st.dataframe(regime_accuracy.to_frame(), use_container_width=True)
+
+
+def render_plain_language_panels(trained, forecast_df, feature_cols, shap_values):
+    groundwater_story = describe_groundwater_status(trained["featured"], forecast_df)
+    xai_story = describe_xai_meaning(feature_cols, shap_values)
+    next_forecast_display = f"{groundwater_story['next_forecast']:.2f}" if np.isfinite(groundwater_story["next_forecast"]) else "N/A"
+
+    st.subheader("Plain-language groundwater status")
+    st.markdown(
+        f"""
+        <div style="padding:1rem 1.1rem;border-radius:16px;background:#f7fbff;border:1px solid #d7e7f5;">
+            <p style="margin:0 0 0.35rem 0;font-weight:700;font-size:1.05rem;">Current status: {groundwater_story['status_label']}</p>
+            <p style="margin:0 0 0.35rem 0;">Latest observed level: {groundwater_story['latest_level']:.2f}</p>
+            <p style="margin:0 0 0.35rem 0;">Recent change over the last 14 observations: {groundwater_story['recent_change']:+.2f}</p>
+            <p style="margin:0 0 0.35rem 0;">Next forecasted level: {next_forecast_display}</p>
+            <p style="margin:0 0 0.35rem 0;">Anomaly rate: {groundwater_story['anomaly_rate']:.1f}%</p>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+    st.info(groundwater_story["trend_text"])
+    st.info(groundwater_story["forecast_text"])
+    st.info(groundwater_story["anomaly_text"])
+
+    st.subheader("Plain-language XAI meaning")
+    st.markdown(
+        f"""
+        <div style="padding:1rem 1.1rem;border-radius:16px;background:#fffaf2;border:1px solid #f0dcc0;">
+            <p style="margin:0 0 0.35rem 0;font-weight:700;font-size:1.05rem;">What SHAP is saying</p>
+            <p style="margin:0;">{xai_story['summary_text']}</p>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+    st.write(xai_story["plain_language"])
+    st.dataframe(xai_story["top_features"].rename("mean_abs_shap").to_frame(), use_container_width=True)
 
 
 def main():
@@ -600,6 +721,9 @@ def main():
             st.info(
                 "Interpretation: positive SHAP values push the prediction toward higher groundwater depth, while negative values pull it lower; the ranking shows which engineered time-series signals matter most for the model."
             )
+
+            st.divider()
+            render_plain_language_panels(trained, forecast_df, feature_cols, shap_values)
 
         with method_tab:
             st.subheader("Research methodology")
