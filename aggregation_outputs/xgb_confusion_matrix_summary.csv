@@ -1,0 +1,10 @@
+Actual,Pred,Count
+Actual Low,Pred Low,8282
+Actual Low,Pred Moderate,672
+Actual Low,Pred High,61
+Actual Moderate,Pred Low,246
+Actual Moderate,Pred Moderate,6388
+Actual Moderate,Pred High,240
+Actual High,Pred Low,70
+Actual High,Pred Moderate,398
+Actual High,Pred High,5222

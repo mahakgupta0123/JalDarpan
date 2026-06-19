@@ -1,5 +1,6 @@
 from datetime import datetime, timedelta
 import os
+import sys
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -13,10 +14,16 @@ from sklearn.ensemble import IsolationForest, RandomForestRegressor
 from sklearn.metrics import confusion_matrix, mean_absolute_error, mean_squared_error, r2_score
 from xgboost import XGBRegressor
 
+# Import benchmark utilities from parent directory
+parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if parent_dir not in sys.path:
+    sys.path.insert(0, parent_dir)
+from benchmark_utils import load_benchmark_results, build_pooled_summaries, get_regime_validity_note
 
 st.set_page_config(page_title="JalDarpan", page_icon="🌊", layout="wide")
 
 DEFAULT_BACKEND_URL = os.environ.get("BACKEND_URL", "http://localhost:5000")
+BENCHMARK_CSV = os.environ.get("BENCHMARK_CSV", os.path.join(parent_dir, "benchmark_results.csv"))
 BENCHMARK_CACHE = "research_benchmark_runs.csv"
 
 
@@ -46,6 +53,25 @@ def _format_driver_name(feature_name):
 
 def _plotly_chart(fig, key):
     st.plotly_chart(fig, use_container_width=True, key=key)
+
+
+def safe_st_dataframe(frame, **kwargs):
+    if frame is None:
+        st.write("No data available.")
+        return
+    try:
+        st.dataframe(frame, **kwargs)
+        return
+    except Exception:
+        sanitized = frame.copy()
+        for col in sanitized.columns:
+            if sanitized[col].dtype == object:
+                sanitized[col] = sanitized[col].astype(str)
+        try:
+            st.dataframe(sanitized, **kwargs)
+            return
+        except Exception:
+            st.write(sanitized)
 
 
 def _geocode_location(state, district):
@@ -154,18 +180,67 @@ def load_cached_data():
     return None
 
 
+def _fetch_backend_list(backend_url, endpoint, path_value=None):
+    if not backend_url:
+        return []
+    url = f"{backend_url.rstrip('/')}/{endpoint.lstrip('/')}"
+    if path_value:
+        url = f"{url}/{requests.utils.requote_uri(path_value)}"
+
+    try:
+        response = requests.get(url, timeout=30)
+        response.raise_for_status()
+        payload = response.json()
+        if payload.get("status") != "success":
+            return []
+        return payload.get(endpoint.strip('/'), []) or []
+    except Exception:
+        return []
+
+
+@st.cache_data(ttl=600, show_spinner=False)
+def fetch_state_choices(backend_url):
+    return _fetch_backend_list(backend_url, "states")
+
+
+@st.cache_data(ttl=600, show_spinner=False)
+def fetch_district_choices(backend_url, state):
+    if not state:
+        return []
+    return _fetch_backend_list(backend_url, "districts", path_value=state)
+
+
+@st.cache_data(ttl=600, show_spinner=False)
+def fetch_agency_choices(backend_url):
+    return _fetch_backend_list(backend_url, "agencies")
+
+
 def load_benchmark_runs():
+    """Load benchmark runs from CSV. Falls back to old cache if new CSV not available."""
+    results_df = load_benchmark_results(BENCHMARK_CSV)
+    if results_df is not None and not results_df.empty:
+        return results_df
+    
+    # Fallback to old cache file for backward compatibility
     if os.path.exists(BENCHMARK_CACHE):
         return pd.read_csv(BENCHMARK_CACHE)
+    
     return pd.DataFrame()
 
 
 def record_benchmark_run(meta, metrics, trained):
+    """
+    Record a single benchmark run to the local cache CSV.
+    This is still used by the live dashboard for accumulating manual runs.
+    """
     row = {
         "state": meta.get("state", ""),
         "district": meta.get("district", ""),
         "agency": meta.get("agency", ""),
         "rows": int(meta.get("rows", 0)),
+        "split_ratio": trained.get("split_ratio", 0.80),
+        "regime_valid": trained.get("regime_valid", False),
+        "regime_class_count": trained.get("regime_class_count", 0),
     }
 
     for model_name in metrics.index:
@@ -184,6 +259,11 @@ def record_benchmark_run(meta, metrics, trained):
 
 
 def build_benchmark_summary(exclude_latest=False):
+    """
+    Build a benchmark summary from loaded runs.
+    If BENCHMARK_CSV exists and is populated, use that as primary source.
+    Otherwise fall back to local cache.
+    """
     runs = load_benchmark_runs()
     if runs.empty:
         return None
@@ -191,27 +271,240 @@ def build_benchmark_summary(exclude_latest=False):
     if exclude_latest and len(runs) > 1:
         runs = runs.iloc[:-1].copy()
 
-    summary = {}
-    model_names = ["Persistence", "Random Forest", "XGBoost"]
-    for model_name in model_names:
-        summary[model_name] = {}
-        for column_name in runs.columns:
-            if column_name.startswith(f"{model_name}__"):
-                metric_name = column_name.split("__", 1)[1]
-                summary[model_name][metric_name] = float(runs[column_name].median())
+    # Only include successful runs
+    if "status" in runs.columns:
+        runs = runs[runs["status"] == "SUCCESS"].copy()
+    
+    if runs.empty:
+        return None
 
-    xgb_cm = pd.DataFrame(0, index=["Actual Low", "Actual Moderate", "Actual High"], columns=["Pred Low", "Pred Moderate", "Pred High"])
-    for actual_label in xgb_cm.index:
-        for pred_label in xgb_cm.columns:
-            col_name = f"xgb_cm__{actual_label}__{pred_label}"
-            if col_name in runs.columns:
-                xgb_cm.loc[actual_label, pred_label] = int(runs[col_name].fillna(0).sum())
+    pooled = build_pooled_summaries(runs)
+    if pooled is None:
+        return None
 
     return {
         "runs": runs,
-        "summary": pd.DataFrame(summary).T,
-        "xgb_cm": xgb_cm,
+        "summary": pooled["summary"],
+        "xgb_cm": pooled.get("xgb_cm", pd.DataFrame()),
     }
+
+
+def _safe_normalize(series):
+    if series is None or series.empty:
+        return pd.Series(dtype=float)
+    series = pd.to_numeric(series, errors="coerce")
+    if series.isna().all():
+        return pd.Series(np.zeros(len(series)), index=series.index)
+    min_v = float(series.min())
+    max_v = float(series.max())
+    if max_v == min_v:
+        return pd.Series(0.5, index=series.index)
+    return (series - min_v) / (max_v - min_v)
+
+
+def build_current_dataset_summary(state, district, featured, trained, forecast_df):
+    latest = float(featured["groundwater_level"].iloc[-1])
+    mean_level = float(featured["groundwater_level"].mean())
+    std_level = float(featured["groundwater_level"].std())
+    min_level = float(featured["groundwater_level"].min())
+    max_level = float(featured["groundwater_level"].max())
+    normalized_latest = (latest - min_level) / (max_level - min_level) if max_level != min_level else 0.5
+    first_date = featured.index.min()
+    last_date = featured.index.max()
+    forecast_next = float(forecast_df["forecast"].iloc[0]) if forecast_df is not None and not forecast_df.empty else np.nan
+    regime_label = None
+    if trained.get("regime_bins") is not None:
+        regime_label = pd.cut(pd.Series([latest]), bins=trained["regime_bins"], labels=trained["regime_labels"], include_lowest=True)[0]
+
+    summary = pd.DataFrame(
+        {
+            "Metric": [
+                "Selected state",
+                "Selected district",
+                "Observations used",
+                "Date range",
+                "Latest groundwater level",
+                "Normalized latest level",
+                "Mean level",
+                "Level standard deviation",
+                "Low/high range",
+                "Next forecast",
+                "Forecast horizon",
+                "Current regime",
+                "Anomaly rate",
+            ],
+            "Value": [
+                state,
+                district,
+                len(featured),
+                f"{first_date.date()} → {last_date.date()} ({(last_date - first_date).days} days)",
+                f"{latest:.3f}",
+                f"{normalized_latest:.2f}",
+                f"{mean_level:.3f}",
+                f"{std_level:.3f}",
+                f"{min_level:.3f} → {max_level:.3f}",
+                f"{forecast_next:.3f}" if np.isfinite(forecast_next) else "N/A",
+                "short-term",
+                str(regime_label or "unclassified"),
+                f"{float(trained['featured']['anomaly_flag'].mean() * 100):.1f}%",
+            ],
+        }
+    )
+    summary["Value"] = summary["Value"].astype(str)
+    return summary
+
+
+def build_benchmark_aggregates(runs):
+    if runs is None or runs.empty:
+        return {}
+
+    numeric = runs.copy()
+    for col in [
+        "XGBoost__MAPE",
+        "XGBoost__RMSE",
+        "XGBoost__NRMSE",
+        "XGBoost__Regime Valid",
+        "XGBoost__Regime Coverage",
+        "XGBoost__Regime Majority Share",
+    ]:
+        if col in numeric.columns:
+            numeric[col] = pd.to_numeric(numeric[col], errors="coerce")
+
+    if "state" in numeric.columns:
+        state_summary = numeric.groupby("state").agg(
+            districts=("district", "nunique"),
+            avg_mape=("XGBoost__MAPE", "mean") if "XGBoost__MAPE" in numeric.columns else ("rows", "count"),
+            avg_rmse=("XGBoost__RMSE", "mean") if "XGBoost__RMSE" in numeric.columns else ("rows", "count"),
+            avg_nrmse=("XGBoost__NRMSE", "mean") if "XGBoost__NRMSE" in numeric.columns else ("rows", "count"),
+            regime_valid_pct=("XGBoost__Regime Valid", "mean") if "XGBoost__Regime Valid" in numeric.columns else ("rows", "count"),
+        ).reset_index()
+        if "avg_mape" in state_summary.columns:
+            state_summary = state_summary.sort_values("avg_mape")
+    else:
+        state_summary = pd.DataFrame()
+
+    national_summary = build_benchmark_summary().get("summary") if build_benchmark_summary() is not None else pd.DataFrame()
+
+    return {
+        "state_summary": state_summary,
+        "national_summary": national_summary,
+    }
+
+
+def build_alert_rankings(runs):
+    if runs is None or runs.empty:
+        return {}
+
+    ranking = runs.copy()
+    for col in [
+        "XGBoost__MAPE",
+        "XGBoost__NRMSE",
+        "XGBoost__Regime Valid",
+        "XGBoost__Regime Majority Share",
+    ]:
+        if col in ranking.columns:
+            ranking[col] = pd.to_numeric(ranking[col], errors="coerce")
+
+    ranking["risk_score"] = (
+        ranking.get("XGBoost__MAPE", 0).fillna(0) * 0.65
+        + ranking.get("XGBoost__NRMSE", 0).fillna(0) * 0.35
+    )
+
+    top_alerts = ranking.sort_values("risk_score", ascending=False).head(10)
+    top_adequate = ranking.sort_values("XGBoost__MAPE", ascending=True).head(10)
+    top_high_confidence = ranking[ranking.get("XGBoost__Regime Valid", 0) > 0].sort_values(
+        "XGBoost__Regime Majority Share", ascending=False
+    ).head(10)
+
+    return {
+        "alerts": top_alerts[["state", "district", "risk_score", "XGBoost__MAPE", "XGBoost__NRMSE"]].copy() if not top_alerts.empty else pd.DataFrame(),
+        "adequate": top_adequate[["state", "district", "XGBoost__MAPE", "XGBoost__NRMSE"]].copy() if not top_adequate.empty else pd.DataFrame(),
+        "high_confidence": top_high_confidence[["state", "district", "XGBoost__Regime Majority Share", "XGBoost__Regime Coverage"]].copy() if not top_high_confidence.empty else pd.DataFrame(),
+    }
+
+
+def render_dataset_analysis_panel(state, district, featured, trained, forecast_df, benchmark_aggregates):
+    st.subheader("Dataset analysis")
+    current_summary = build_current_dataset_summary(state, district, featured, trained, forecast_df)
+    safe_st_dataframe(current_summary, use_container_width=True)
+
+    if benchmark_aggregates.get("state_summary") is not None and not benchmark_aggregates["state_summary"].empty:
+        st.markdown("### State-level benchmark summary")
+        st.dataframe(
+            benchmark_aggregates["state_summary"].head(12).style.format(
+                {
+                    "avg_mape": "{:.2f}",
+                    "avg_rmse": "{:.3f}",
+                    "avg_nrmse": "{:.3f}",
+                    "regime_valid_pct": "{:.2f}",
+                }
+            ),
+            use_container_width=True,
+        )
+
+    if benchmark_aggregates.get("national_summary") is not None and not benchmark_aggregates["national_summary"].empty:
+        st.markdown("### National pooled benchmark")
+        st.dataframe(benchmark_aggregates["national_summary"].style.format("{:.4f}"), use_container_width=True)
+
+    st.markdown("### Feature engineering overview")
+    st.write(
+        f"- Generated {len(trained['feature_cols'])} engineered features from the cleaned time series."
+    )
+    st.write("- Normalized the most recent groundwater value relative to the selected district range.")
+    st.write("- Used rolling means, rolling standard deviations, lag values, differences, and seasonal encodings.")
+
+
+def render_alert_tables(runs):
+    st.subheader("Risk and water-level alert board")
+    rankings = build_alert_rankings(runs)
+    if not rankings:
+        st.info("No benchmark alert rankings are available yet.")
+        return
+
+    cols = st.columns(3)
+    with cols[0]:
+        st.markdown("#### Top 10 alarmed districts")
+        if not rankings["alerts"].empty:
+            st.dataframe(
+                rankings["alerts"].rename(
+                    columns={
+                        "risk_score": "Risk score",
+                        "XGBoost__MAPE": "MAPE",
+                        "XGBoost__NRMSE": "NRMSE",
+                    }
+                ),
+                use_container_width=True,
+            )
+        else:
+            st.write("No high-risk districts found.")
+    with cols[1]:
+        st.markdown("#### Top 10 adequate districts")
+        if not rankings["adequate"].empty:
+            st.dataframe(
+                rankings["adequate"].rename(
+                    columns={
+                        "XGBoost__MAPE": "MAPE",
+                        "XGBoost__NRMSE": "NRMSE",
+                    }
+                ),
+                use_container_width=True,
+            )
+        else:
+            st.write("No adequate districts can be ranked right now.")
+    with cols[2]:
+        st.markdown("#### Top 10 high-confidence districts")
+        if not rankings["high_confidence"].empty:
+            st.dataframe(
+                rankings["high_confidence"].rename(
+                    columns={
+                        "XGBoost__Regime Majority Share": "Regime majority",
+                        "XGBoost__Regime Coverage": "Regime coverage",
+                    }
+                ),
+                use_container_width=True,
+            )
+        else:
+            st.write("No high-confidence districts with valid regime coverage are available.")
 
 
 def normalize_groundwater_frame(df):
@@ -372,7 +665,7 @@ def build_location_map(location_context, featured):
 
     fig = go.Figure()
     fig.add_trace(
-        go.Scattermap(
+        go.Scattermapbox(
             lat=points["lat"],
             lon=points["lon"],
             mode="markers",
@@ -390,7 +683,7 @@ def build_location_map(location_context, featured):
         )
     )
     fig.update_layout(
-        map={"style": "open-street-map", "center": {"lat": center_lat, "lon": center_lon}, "zoom": 7},
+        mapbox=dict(style="open-street-map", center=dict(lat=center_lat, lon=center_lon), zoom=7),
         margin=dict(l=0, r=0, t=0, b=0),
         height=500,
         template="plotly_white",
@@ -434,17 +727,98 @@ def build_anomaly_chart(featured):
     return fig
 
 
-def build_correlation_heatmap(corr_frame):
+def build_daily_groundwater_heatmap(featured):
+    if featured is None or featured.empty:
+        return None
+    if "groundwater_level" not in featured.columns:
+        return None
+    levels = pd.to_numeric(featured["groundwater_level"], errors="coerce")
+    if levels.isna().all():
+        return None
+
     fig = go.Figure(
         data=go.Heatmap(
-            z=corr_frame.values,
+            z=[levels.fillna(0.0).tolist()],
+            x=featured.index,
+            y=["Groundwater level"],
+            colorscale="Viridis",
+            colorbar=dict(title="Level"),
+            hovertemplate="Date: %{x}<br>Level: %{z:.2f}<extra></extra>",
+        )
+    )
+    fig.update_layout(
+        height=260,
+        template="plotly_white",
+        margin=dict(l=20, r=20, t=30, b=20),
+        paper_bgcolor="white",
+        plot_bgcolor="white",
+        font=dict(color="#10313e"),
+    )
+    fig.update_xaxes(tickangle=-45)
+    return fig
+
+
+def _build_placeholder_heatmap(title, message):
+    fig = go.Figure()
+    fig.add_annotation(
+        x=0.5,
+        y=0.5,
+        text=f"<b>{title}</b><br>{message}",
+        showarrow=False,
+        xref="paper",
+        yref="paper",
+        font=dict(size=14, color="#10313e"),
+        align="center",
+    )
+    fig.update_xaxes(visible=False)
+    fig.update_yaxes(visible=False)
+    fig.update_layout(
+        height=520,
+        template="plotly_white",
+        margin=dict(l=20, r=20, t=20, b=20),
+        paper_bgcolor="white",
+        plot_bgcolor="white",
+    )
+    return fig
+
+
+def build_correlation_heatmap(corr_frame):
+    if corr_frame is None or corr_frame.empty:
+        return _build_placeholder_heatmap(
+            "Correlation heatmap unavailable",
+            "No numeric feature correlations could be computed from the selected data.",
+        )
+
+    corr_frame = corr_frame.copy()
+    corr_frame = corr_frame.dropna(axis=0, how="all").dropna(axis=1, how="all")
+    if corr_frame.empty:
+        return _build_placeholder_heatmap(
+            "Correlation heatmap unavailable",
+            "All correlation data is empty or invalid.",
+        )
+
+    try:
+        z_values = corr_frame.astype(float).fillna(0.0).values
+    except Exception:
+        try:
+            z_values = pd.to_numeric(corr_frame.values, errors="coerce")
+            z_values = np.nan_to_num(z_values.astype(float), nan=0.0, posinf=0.0, neginf=0.0)
+        except Exception:
+            return _build_placeholder_heatmap(
+                "Correlation heatmap unavailable",
+                "Could not convert correlation values to numbers.",
+            )
+
+    fig = go.Figure(
+        data=go.Heatmap(
+            z=z_values,
             x=corr_frame.columns.tolist(),
             y=corr_frame.index.tolist(),
             colorscale="YlGnBu",
             zmid=0,
-            text=corr_frame.values,
+            text=np.round(z_values, 3),
             texttemplate="%{text}",
-            hovertemplate="%{y} × %{x}: %{z}<extra></extra>",
+            hovertemplate="%{y} × %{x}: %{z:.3f}<extra></extra>",
         )
     )
     fig.update_layout(
@@ -458,35 +832,6 @@ def build_correlation_heatmap(corr_frame):
     return fig
 
 
-def build_shap_heatmap(sample, shap_values, feature_cols):
-    heatmap_rows = min(25, len(sample))
-    if heatmap_rows == 0:
-        return None
-
-    heat_df = pd.DataFrame(
-        shap_values[-heatmap_rows:],
-        index=[idx.strftime("%Y-%m-%d") for idx in sample.index[-heatmap_rows:]],
-        columns=feature_cols,
-    )
-    fig = go.Figure(
-        data=go.Heatmap(
-            z=heat_df.values,
-            x=heat_df.columns.tolist(),
-            y=heat_df.index.tolist(),
-            colorscale="RdBu",
-            zmid=0,
-            hovertemplate="Date: %{y}<br>Feature: %{x}<br>SHAP: %{z:.4f}<extra></extra>",
-        )
-    )
-    fig.update_layout(
-        height=520,
-        template="plotly_white",
-        margin=dict(l=20, r=20, t=30, b=20),
-        paper_bgcolor="white",
-        plot_bgcolor="white",
-        font=dict(color="#10313e"),
-    )
-    return fig
 
 
 def train_models(featured, feature_cols):
@@ -589,6 +934,9 @@ def train_models(featured, feature_cols):
         "regime_labels": regime_labels,
         "actual_regime_counts": actual_regime_counts,
         "regime_eval_note": regime_eval_note,
+        "split_ratio": 0.80,  # Dashboard uses fixed 80/20; sweep script uses ladder
+        "regime_valid": regime_class_count == 3,
+        "regime_class_count": regime_class_count,
         "regime_confusion_matrices": {
             "Persistence": persistence_cm,
             "Random Forest": rf_cm,
@@ -684,7 +1032,7 @@ def render_methodology_cards(featured, feature_cols, trained):
     xai_steps = [
         "SHAP TreeExplainer on XGBoost to quantify per-feature contribution.",
         "Bar summary plot for global feature ranking and interpretation.",
-        "Top SHAP drivers surfaced as text and a heatmap so non-technical users can follow the logic.",
+        "Top SHAP drivers surfaced as text for easy interpretation.",
     ]
 
     left, middle, right = st.columns(3)
@@ -719,7 +1067,8 @@ def render_methodology_cards(featured, feature_cols, trained):
             ],
         }
     )
-    st.dataframe(summary, use_container_width=True, hide_index=True)
+    summary["Value"] = summary["Value"].astype(str)
+    safe_st_dataframe(summary, use_container_width=True, hide_index=True)
 
 
 def render_model_explainer_dialogs():
@@ -846,11 +1195,13 @@ def render_map_panel(location_context, featured):
 
 
 def render_pattern_panel(trained, feature_cols):
-    st.subheader("Patterns and validation heatmaps")
+    st.subheader("Patterns and validation")
+    st.markdown("This section summarizes the research validation metrics and model performance, including the feature correlation heatmap for the selected dataset.")
+
     corr_frame = correlation_heatmap_frame(trained["featured"], feature_cols)
     corr_fig = build_correlation_heatmap(corr_frame)
-    _plotly_chart(corr_fig, key="research_correlation")
-    st.caption("This correlation matrix shows which engineered signals move together and which ones behave differently.")
+    _plotly_chart(corr_fig, key="research_correlation_heatmap")
+    st.caption("The correlation heatmap shows how the engineered features move together and which signals are most closely related to groundwater level.")
 
     st.markdown("### Model scorecard")
     metric_fig = go.Figure()
@@ -880,22 +1231,59 @@ def render_benchmark_panel(trained):
     benchmark = build_benchmark_summary(exclude_latest=True)
     st.subheader("Cumulative research benchmark")
 
-    if benchmark is None:
-        st.info("No prior benchmark history exists yet. This panel is reserved for historical comparison across earlier runs and stays separate from the current dataset scorecard.")
+    if benchmark is None or benchmark["summary"].empty:
+        st.info("No benchmark runs available yet. Run `python run_benchmark_sweep.py` from the project root to populate the national benchmark, or navigate to Settings > Run analysis to record manual runs here.")
         return
 
-    st.caption(f"Pooled over {len(benchmark['runs'])} prior runs only. These are historical comparison values, not the current dataset scorecard.")
+    runs = benchmark["runs"]
+    valid_run_count = (runs.get("regime_valid", False).sum() if "regime_valid" in runs.columns else 0)
+    total_run_count = len(runs)
+    
+    validity_note = get_regime_validity_note(valid_run_count, total_run_count)
+    st.caption(f"Pooled over {total_run_count} prior runs. {validity_note}")
+    
+    # --- Per-District Table ---
+    st.markdown("### Per-district results")
+    
+    # Select display columns
+    display_cols = ["state", "district", "split_ratio", "regime_valid", "train_rows", "test_rows", "anomaly_rate_pct"]
+    
+    # Add model summary metrics (RMSE, MAE, MAPE from XGBoost)
+    for metric in ["RMSE", "MAE", "MAPE"]:
+        col_name = f"XGBoost__{metric}"
+        if col_name in runs.columns:
+            display_cols.append(col_name)
+    
+    display_df = runs[display_cols].copy() if all(col in runs.columns for col in display_cols) else runs
+    
+    st.dataframe(
+        display_df.style.format({
+            "split_ratio": "{:.0%}",
+            "anomaly_rate_pct": "{:.1f}%",
+            "XGBoost__RMSE": "{:.3f}",
+            "XGBoost__MAE": "{:.3f}",
+            "XGBoost__MAPE": "{:.1f}",
+        }),
+        use_container_width=True,
+        height=400,
+    )
+    st.caption("split_ratio: train/test ratio used (80/20 preferred, falling back to 75/25 or 70/30 if 80/20 didn't yield 3 regime classes). regime_valid: whether all 3 regime classes appeared in test set. anomaly_rate_pct: % of observations flagged as anomalous by Isolation Forest.")
+    
+    # --- Aggregated Metrics ---
+    st.markdown("### Pooled national summary")
     st.dataframe(benchmark["summary"].style.format("{:.4f}"), use_container_width=True)
 
+    # --- Metrics Bars ---
     pooled_fig = go.Figure()
     for metric_name in ["RMSE", "MAE", "MAPE"]:
-        pooled_fig.add_trace(
-            go.Bar(
-                x=benchmark["summary"].index,
-                y=benchmark["summary"][metric_name],
-                name=metric_name,
+        if metric_name in benchmark["summary"].columns:
+            pooled_fig.add_trace(
+                go.Bar(
+                    x=benchmark["summary"].index,
+                    y=benchmark["summary"][metric_name],
+                    name=metric_name,
+                )
             )
-        )
     pooled_fig.update_layout(
         barmode="group",
         template="plotly_white",
@@ -907,27 +1295,12 @@ def render_benchmark_panel(trained):
     )
     _plotly_chart(pooled_fig, key="research_pooled_metrics")
 
-    st.markdown("### Cumulative confusion matrix")
-    heat_fig = go.Figure(
-        data=go.Heatmap(
-            z=benchmark["xgb_cm"].values,
-            x=benchmark["xgb_cm"].columns.tolist(),
-            y=benchmark["xgb_cm"].index.tolist(),
-            colorscale="Blues",
-            showscale=True,
-            text=benchmark["xgb_cm"].values,
-            texttemplate="%{text}",
-        )
-    )
-    heat_fig.update_layout(
-        height=420,
-        template="plotly_white",
-        margin=dict(l=20, r=20, t=30, b=20),
-        paper_bgcolor="white",
-        plot_bgcolor="white",
-        font=dict(color="#10313e"),
-    )
-    _plotly_chart(heat_fig, key="research_pooled_confusion_matrix")
+    st.markdown("### Cumulative confusion matrix (XGBoost)")
+    if not benchmark["xgb_cm"].empty:
+        st.dataframe(benchmark["xgb_cm"].astype(str), use_container_width=True)
+    else:
+        st.info("Cumulative confusion matrix data is unavailable.")
+    st.info(validity_note)
 
 
 def render_research_protocol(trained, feature_cols, shap_values):
@@ -963,6 +1336,13 @@ def render_forecast_and_anomaly_panel(trained, forecast_df):
     st.subheader("Forecast and anomaly view")
     anomaly_fig = build_anomaly_chart(trained["featured"])
     _plotly_chart(anomaly_fig, key="home_anomaly_chart")
+
+    water_heatmap = build_daily_groundwater_heatmap(trained["featured"])
+    if water_heatmap is not None:
+        st.markdown("### Daily groundwater heatmap")
+        _plotly_chart(water_heatmap, key="home_water_level_heatmap")
+    else:
+        st.info("Daily groundwater heatmap is not available for this dataset.")
 
     forecast_fig = go.Figure()
     forecast_fig.add_trace(
@@ -1001,7 +1381,7 @@ def render_forecast_and_anomaly_panel(trained, forecast_df):
         font=dict(color="#10313e"),
     )
     _plotly_chart(forecast_fig, key="home_forecast_chart")
-    st.dataframe(forecast_df, use_container_width=True)
+    safe_st_dataframe(forecast_df, use_container_width=True)
 
 
 def render_confusion_matrix_panel(trained):
@@ -1095,7 +1475,6 @@ def render_transparency_explainers(trained, forecast_df, feature_cols, shap_valu
         st.markdown("- Correlation matrix: shows whether engineered inputs move together or overlap.")
         st.markdown("- Confusion matrix: converts continuous groundwater into Low / Moderate / High regime classes so the model can be checked in a policy-friendly way.")
         st.markdown("- SHAP bar plot: ranks the strongest drivers of the forecast.")
-        st.markdown("- SHAP heatmap: shows how those drivers change across recent dates.")
         st.markdown("- Forecast plot: shows short-term projection and uncertainty band.")
         st.markdown("- Anomaly chart: highlights unusual readings that should be reviewed before using the results.")
 
@@ -1121,44 +1500,301 @@ def render_transparency_explainers(trained, forecast_df, feature_cols, shap_valu
         )
 
 
+def render_national_aggregation_dashboard():
+    """Render the national-level aggregation metrics dashboard."""
+    import traceback
+    
+    try:
+        # Try to find the aggregation_outputs directory
+        parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        output_dir = os.path.join(parent_dir, "aggregation_outputs")
+        
+        st.info(f"📂 Looking for data in: `{output_dir}`")
+        
+        if not os.path.exists(output_dir):
+            st.error(f"❌ Directory not found: {output_dir}\n\nPlease run the aggregation script first:\n```bash\ncd {os.path.dirname(parent_dir)}\npython aggregate_research_metrics.py\n```")
+            return
+        
+        st.success(f"✓ Found aggregation directory")
+        
+        # Load national-level metrics
+        national_file = os.path.join(output_dir, "national_level_aggregation.csv")
+        if not os.path.exists(national_file):
+            st.error(f"❌ File not found: national_level_aggregation.csv")
+            return
+        df_national = pd.read_csv(national_file)
+        st.success(f"✓ Loaded national metrics ({len(df_national)} rows)")
+        
+        # Load publication table
+        pub_file = os.path.join(output_dir, "publication_national_table.csv")
+        df_pub = pd.read_csv(pub_file) if os.path.exists(pub_file) else None
+        if df_pub is not None:
+            st.success(f"✓ Loaded publication table ({len(df_pub)} models)")
+        
+        # Load confusion matrix
+        cm_file = os.path.join(output_dir, "xgb_confusion_matrix_summary.csv")
+        df_cm = pd.read_csv(cm_file) if os.path.exists(cm_file) else None
+        if df_cm is not None:
+            st.success(f"✓ Loaded confusion matrix ({len(df_cm)} entries)")
+        
+        # Load district rankings
+        rankings_file = os.path.join(output_dir, "district_model_rankings.csv")
+        df_rankings = pd.read_csv(rankings_file) if os.path.exists(rankings_file) else None
+        if df_rankings is not None:
+            st.success(f"✓ Loaded district rankings ({len(df_rankings)} districts)")
+        
+        # Load excluded districts
+        excluded_file = os.path.join(output_dir, "excluded_districts.csv")
+        df_excluded = pd.read_csv(excluded_file) if os.path.exists(excluded_file) else None
+        if df_excluded is not None:
+            st.success(f"✓ Loaded excluded districts ({len(df_excluded)} excluded)")
+        
+        st.divider()
+        
+        # Display KPI cards
+        st.subheader("📊 Key Performance Indicators")
+        if df_pub is not None and len(df_pub) > 0:
+            col1, col2, col3, col4 = st.columns(4)
+            
+            with col1:
+                rf_rows = df_pub[df_pub['Model'] == 'Random Forest']
+                if len(rf_rows) > 0:
+                    rf_nrmse = rf_rows['NRMSE (mean)'].iloc[0]
+                    st.metric("RF NRMSE", f"{rf_nrmse:.4f}" if pd.notna(rf_nrmse) else "N/A")
+                else:
+                    st.metric("RF NRMSE", "N/A")
+            
+            with col2:
+                xgb_rows = df_pub[df_pub['Model'] == 'XGBoost']
+                if len(xgb_rows) > 0:
+                    xgb_nrmse = xgb_rows['NRMSE (mean)'].iloc[0]
+                    st.metric("XGBoost NRMSE", f"{xgb_nrmse:.4f}" if pd.notna(xgb_nrmse) else "N/A")
+                else:
+                    st.metric("XGBoost NRMSE", "N/A")
+            
+            with col3:
+                if len(xgb_rows) > 0 and 'R2 (mean)' in df_pub.columns:
+                    xgb_r2 = xgb_rows['R2 (mean)'].iloc[0]
+                    st.metric("XGBoost R²", f"{xgb_r2:.4f}" if pd.notna(xgb_r2) else "N/A")
+                else:
+                    st.metric("XGBoost R²", "N/A")
+            
+            with col4:
+                if 'Valid Districts' in df_pub.columns:
+                    valid_districts = df_pub['Valid Districts'].iloc[0]
+                    st.metric("Valid Districts", int(valid_districts) if pd.notna(valid_districts) else "N/A")
+                else:
+                    st.metric("Valid Districts", "N/A")
+        else:
+            st.warning("No publication metrics available")
+        
+        st.divider()
+        
+        # Model comparison metrics
+        st.subheader("📈 Model Performance Comparison")
+        if df_pub is not None and len(df_pub) > 0:
+            metrics_to_plot = ["NRMSE (mean)", "R2 (mean)", "NSE (mean)", "KGE (mean)"]
+            available_metrics = [m for m in metrics_to_plot if m in df_pub.columns]
+            
+            if available_metrics:
+                fig = make_subplots(
+                    rows=1, cols=len(available_metrics),
+                    subplot_titles=available_metrics,
+                    specs=[[{"type": "bar"} for _ in available_metrics]]
+                )
+                
+                colors = ["#1f77b4", "#ff7f0e", "#2ca02c"]
+                for idx, metric in enumerate(available_metrics, 1):
+                    for model_idx, (_, row) in enumerate(df_pub.iterrows()):
+                        model = row.get('Model', f'Model {model_idx}')
+                        value = row.get(metric, np.nan)
+                        fig.add_trace(
+                            go.Bar(x=[model], y=[value], name=model, marker_color=colors[model_idx % len(colors)], showlegend=(idx==1)),
+                            row=1, col=idx
+                        )
+                
+                fig.update_layout(height=400, showlegend=True)
+                _plotly_chart(fig, key="model_comparison")
+        
+        # NRMSE comparison
+        st.subheader("📉 Normalized RMSE (Lower is Better)")
+        if df_pub is not None and len(df_pub) > 0 and "NRMSE (mean)" in df_pub.columns:
+            fig_nrmse = go.Figure()
+            for _, row in df_pub.iterrows():
+                model = row.get('Model', 'Unknown')
+                nrmse_val = row.get("NRMSE (mean)", np.nan)
+                nrmse_std = row.get("NRMSE (std)", 0) if "NRMSE (std)" in df_pub.columns else 0
+                fig_nrmse.add_trace(go.Bar(
+                    x=[model],
+                    y=[nrmse_val],
+                    error_y=dict(type='data', array=[nrmse_std if pd.notna(nrmse_std) else 0]),
+                    name=model
+                ))
+            fig_nrmse.update_layout(title="NRMSE by Model (with std)", height=400, showlegend=False)
+            _plotly_chart(fig_nrmse, key="nrmse_comparison")
+        
+        # R² comparison
+        st.subheader("📊 R² Score (Higher is Better)")
+        if df_pub is not None and len(df_pub) > 0 and "R2 (mean)" in df_pub.columns:
+            fig_r2 = go.Figure()
+            for _, row in df_pub.iterrows():
+                model = row.get('Model', 'Unknown')
+                r2_val = row.get("R2 (mean)", np.nan)
+                r2_std = row.get("R2 (std)", 0) if "R2 (std)" in df_pub.columns else 0
+                fig_r2.add_trace(go.Bar(
+                    x=[model],
+                    y=[r2_val],
+                    error_y=dict(type='data', array=[r2_std if pd.notna(r2_std) else 0]),
+                    name=model
+                ))
+            fig_r2.update_layout(title="R² by Model (with std)", height=400, showlegend=False)
+            _plotly_chart(fig_r2, key="r2_comparison")
+        
+        # XGBoost Confusion Matrix
+        st.subheader("🎯 XGBoost Regime Classification Matrix")
+        if df_cm is not None and len(df_cm) > 0:
+            try:
+                pivot_cm = df_cm.pivot_table(index="Actual", columns="Pred", values="Count", fill_value=0)
+                fig_cm = go.Figure(data=go.Heatmap(
+                    z=pivot_cm.values,
+                    x=pivot_cm.columns,
+                    y=pivot_cm.index,
+                    text=pivot_cm.values,
+                    texttemplate="%{text}",
+                    colorscale="Blues"
+                ))
+                fig_cm.update_layout(title="Confusion Matrix (National Totals)", height=400)
+                _plotly_chart(fig_cm, key="confusion_matrix")
+                st.dataframe(pivot_cm, use_container_width=True)
+            except Exception as cm_err:
+                st.warning(f"Could not render confusion matrix heatmap: {cm_err}")
+                st.dataframe(df_cm, use_container_width=True)
+        
+        # Model ranking wins
+        st.subheader("🏆 Model Win Frequencies (by District)")
+        if df_rankings is not None and len(df_rankings) > 0 and "rank_1" in df_rankings.columns:
+            rank1_counts = df_rankings["rank_1"].value_counts()
+            if len(rank1_counts) > 0:
+                fig_wins = go.Figure()
+                for model, count in rank1_counts.items():
+                    total_valid = len(df_rankings.dropna(subset=["rank_1"]))
+                    pct = 100 * count / total_valid if total_valid > 0 else 0
+                    fig_wins.add_trace(go.Bar(x=[model], y=[count], name=model, text=f"{pct:.1f}%", textposition="auto"))
+                fig_wins.update_layout(title="Districts Where Each Model Ranks #1", height=400, showlegend=False)
+                _plotly_chart(fig_wins, key="model_wins")
+        
+        st.divider()
+        
+        # Summary statistics
+        st.subheader("📋 Aggregation Summary")
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            if df_excluded is not None:
+                st.metric("Districts Excluded", len(df_excluded))
+            if df_national is not None and len(df_national) > 0 and "n_districts" in df_national.columns:
+                st.metric("Valid Districts", int(df_national["n_districts"].iloc[0]))
+        with col2:
+            if df_excluded is not None and len(df_excluded) > 0:
+                st.write("**Top Exclusion Reasons:**")
+                if "exclude_reasons" in df_excluded.columns:
+                    reasons = df_excluded["exclude_reasons"].value_counts()
+                    for reason, count in reasons.head(3).items():
+                        st.write(f"  • {reason}: {count}")
+        with col3:
+            st.write("**Publication Metrics:**")
+            if df_pub is not None:
+                st.dataframe(df_pub[["Model", "NRMSE (mean)", "R2 (mean)", "Valid Districts"]], use_container_width=True)
+        
+        st.divider()
+        
+        # Detailed metrics table
+        st.subheader("📊 Detailed National Metrics")
+        st.dataframe(df_national, use_container_width=True)
+        
+        st.divider()
+        
+        # Download buttons
+        st.subheader("💾 Download Outputs")
+        col1, col2, col3, col4 = st.columns(4)
+        with col1:
+            if df_national is not None:
+                st.download_button(
+                    "📊 National Metrics",
+                    data=df_national.to_csv(index=False).encode('utf-8'),
+                    file_name="national_level_aggregation.csv",
+                    mime="text/csv"
+                )
+        with col2:
+            if df_pub is not None:
+                st.download_button(
+                    "📈 Publication Table",
+                    data=df_pub.to_csv(index=False).encode('utf-8'),
+                    file_name="publication_national_table.csv",
+                    mime="text/csv"
+                )
+        with col3:
+            if df_cm is not None:
+                st.download_button(
+                    "🎯 Confusion Matrix",
+                    data=df_cm.to_csv(index=False).encode('utf-8'),
+                    file_name="xgb_confusion_matrix_summary.csv",
+                    mime="text/csv"
+                )
+        with col4:
+            if df_rankings is not None:
+                st.download_button(
+                    "🏆 Model Rankings",
+                    data=df_rankings.to_csv(index=False).encode('utf-8'),
+                    file_name="district_model_rankings.csv",
+                    mime="text/csv"
+                )
+        
+    except Exception as e:
+        error_type = type(e).__name__
+        error_msg = str(e)
+        st.error(f"❌ Error: {error_type}: {error_msg}")
+        st.error(f"Traceback:\n```\n{traceback.format_exc()}\n```")
+
+
 def main():
     st.markdown(
         """
         <style>
         html, body, [data-testid="stAppViewContainer"], .stApp {
-            background: #f4faf9;
-            color: #10313e;
+            background: #ffffff;
+            color: #000000;
         }
         .block-container { padding-top: 1.2rem; padding-bottom: 1.5rem; }
         [data-testid="stMetric"] {
             background: #ffffff;
-            border: 1px solid #e7eef5;
+            border: 1px solid #d9d9d9;
             border-radius: 14px;
             padding: 0.75rem 0.9rem;
-            box-shadow: 0 6px 20px rgba(16, 24, 40, 0.04);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.05);
         }
         [data-testid="stDataFrame"] {
             background: #ffffff;
         }
         section[data-testid="stSidebar"] {
-            background: #f7fbfb;
+            background: #ffffff;
+            color: #000000;
         }
         .hero {
             padding: 1.1rem 1.3rem;
             border-radius: 18px;
-            background: linear-gradient(135deg, #f7fbfc 0%, #eef7f8 55%, #e3f1f2 100%);
-            color: #10313e;
+            background: #ffffff;
+            color: #000000;
             margin-bottom: 1rem;
-            border: 1px solid #d7e7ea;
-            box-shadow: 0 12px 28px rgba(16, 49, 62, 0.07);
+            border: 1px solid #e5e5e5;
+            box-shadow: 0 12px 28px rgba(0, 0, 0, 0.05);
         }
         .subtle { opacity: 0.78; }
         .section-card {
-            background: #fbfefe;
-            border: 1px solid #e3eef1;
+            background: #ffffff;
+            border: 1px solid #e5e5e5;
             border-radius: 16px;
             padding: 1rem 1.05rem;
-            box-shadow: 0 10px 24px rgba(16, 49, 62, 0.03);
+            box-shadow: 0 10px 24px rgba(0, 0, 0, 0.04);
         }
         .stButton button,
         .stSelectbox [data-baseweb="select"],
@@ -1167,11 +1803,13 @@ def main():
         .stDateInput input,
         .stSlider {
             background: #ffffff !important;
-            color: #10313e !important;
+            color: #000000 !important;
         }
         h1, h2, h3, h4, p, label, .stMarkdown, .stCaption {
-            color: #10313e;
+            color: #000000;
         }
+        .css-1kyxreq { background: #ffffff !important; }
+        .css-1v0mbdj { color: #000000 !important; }
         </style>
         """,
         unsafe_allow_html=True,
@@ -1190,9 +1828,31 @@ def main():
     with st.sidebar:
         st.header("Inputs")
         backend_url = st.text_input("Backend URL", DEFAULT_BACKEND_URL)
-        state = st.text_input("State", "Odisha")
-        district = st.text_input("District", "Baleshwar")
-        agency = st.text_input("Agency", "CGWB")
+
+        state_choices = fetch_state_choices(backend_url)
+        if state_choices:
+            default_state = "Odisha" if "Odisha" in state_choices else state_choices[0]
+            state = st.selectbox("State", state_choices, index=state_choices.index(default_state))
+        else:
+            st.warning("State list could not be loaded from the backend. Using manual entry.")
+            state = st.text_input("State", "Odisha")
+
+        district_choices = fetch_district_choices(backend_url, state)
+        if district_choices:
+            default_district = "Baleshwar" if "Baleshwar" in district_choices else district_choices[0]
+            district = st.selectbox("District", district_choices, index=district_choices.index(default_district))
+        else:
+            st.warning("District list could not be loaded from the backend for the selected state. Using manual entry.")
+            district = st.text_input("District", "Baleshwar")
+
+        agency_choices = fetch_agency_choices(backend_url)
+        if agency_choices:
+            default_agency = "CGWB" if "CGWB" in agency_choices else agency_choices[0]
+            agency = st.selectbox("Agency", agency_choices, index=agency_choices.index(default_agency))
+        else:
+            st.warning("Agency list could not be loaded from the backend. Using manual entry.")
+            agency = st.text_input("Agency", "CGWB")
+
         startdate = st.date_input("Start date", datetime.now() - timedelta(days=365))
         enddate = st.date_input("End date", datetime.now())
         size = st.number_input("Max records", min_value=50, max_value=2000, value=500, step=50)
@@ -1258,7 +1918,7 @@ def main():
 
         render_kpis(trained["featured"], trained["metrics"], forecast_df)
 
-        home_tab, research_tab = st.tabs(["Home", "Research"])
+        home_tab, research_tab, national_tab = st.tabs(["Home", "Research", "National Aggregation"])
 
         with home_tab:
             st.markdown('<div class="section-card">', unsafe_allow_html=True)
@@ -1276,6 +1936,9 @@ def main():
             render_forecast_and_anomaly_panel(trained, forecast_df)
 
             st.divider()
+            render_dataset_analysis_panel(state, district, trained["featured"], trained, forecast_df, build_benchmark_aggregates(load_benchmark_runs()))
+
+            st.divider()
             st.subheader("Simple explanation")
             render_model_explainer_dialogs()
             sample, shap_values = shap_summary(trained["xgb"], trained["featured"], feature_cols)
@@ -1289,6 +1952,7 @@ def main():
                 "SHAP shows which recent signals are pushing the forecast up or down. Anomaly detection flags unusual points so users can review them before trusting the trend."
             )
             render_plain_language_panels(trained, forecast_df, feature_cols, shap_values)
+            render_alert_tables(load_benchmark_runs())
 
         with research_tab:
             st.subheader("Research metrics and graphics")
@@ -1310,10 +1974,6 @@ def main():
             shap.summary_plot(shap_values, sample, show=False)
             st.pyplot(dot_fig, clear_figure=True)
 
-            shap_heatmap = build_shap_heatmap(sample, shap_values, feature_cols)
-            if shap_heatmap is not None:
-                _plotly_chart(shap_heatmap, key="research_shap_heatmap")
-
             st.write("Top drivers: " + ", ".join(pd.Series(np.abs(shap_values).mean(axis=0), index=feature_cols).sort_values(ascending=False).head(5).index.tolist()))
             st.info(
                 "The research view follows the paper-style structure: feature ranking, SHAP spread, temporal contribution heatmap, correlation matrix, regime confusion matrix, and pooled performance summary."
@@ -1332,6 +1992,11 @@ def main():
                 file_name="jaldarpan_features.csv",
                 mime="text/csv",
             )
+
+        with national_tab:
+            st.subheader("National-Level Aggregation Metrics")
+            st.caption("All India aggregated metrics across models with comparative visualizations.")
+            render_national_aggregation_dashboard()
 
         st.success("Dashboard ready: map, heatmaps, explainability, and research validation are available in a simplified layout.")
 

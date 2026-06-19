@@ -3,10 +3,6 @@ from flask_cors import CORS
 import requests
 import os
 import logging
-import urllib3
-
-# Suppress SSL warnings
-urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 app = Flask(__name__)
 CORS(app)
@@ -16,8 +12,8 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 WRIS_BASE = os.environ.get("WRIS_BASE_URL", "https://indiawris.gov.in")
-WRIS_API_BASE = os.environ.get("WRIS_API_BASE", "https://india-water.gov.in/eswis-api")
-WRIS_VERIFY = True
+WRIS_API_BASE = os.environ.get("WRIS_API_BASE", "https://indiawris.gov.in/wris")
+WRIS_VERIFY = os.environ.get("WRIS_VERIFY", "false").lower() in ("true", "1", "yes")
 
 COMMON_HEADERS = {
     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
@@ -50,39 +46,14 @@ def _normalize_wris_list(payload, keys):
 def _request_wris(url, method='get', data=None):
     try:
         if method == 'post':
-            resp = requests.post(url, data=data, headers=COMMON_HEADERS, timeout=90, verify=False)
+            resp = requests.post(url, data=data, headers=COMMON_HEADERS, timeout=90, verify=WRIS_VERIFY)
         else:
-            resp = requests.get(url, headers=COMMON_HEADERS, timeout=30, verify=False)
+            resp = requests.get(url, headers=COMMON_HEADERS, timeout=30, verify=WRIS_VERIFY)
         resp.raise_for_status()
         return resp
     except Exception as exc:
         logger.warning("WRIS request failed %s %s: %s", method.upper(), url, exc)
         return None
-
-
-def _resolve_state_code(state_name_or_code):
-    if not state_name_or_code:
-        return None
-    candidate = str(state_name_or_code).strip()
-    if candidate.isdigit():
-        return candidate
-
-    response = _request_wris(f"{WRIS_API_BASE}/getStatesListDataViewPage/", method='get')
-    if response is None:
-        return None
-    try:
-        payload = response.json()
-    except ValueError:
-        return None
-
-    for row in payload if isinstance(payload, list) else payload.get('data', []):
-        if not isinstance(row, dict):
-            continue
-        name = str(row.get('name') or row.get('state') or row.get('stateName') or '').strip()
-        code = str(row.get('stateCode') or row.get('state_id') or '').strip()
-        if name.lower() == candidate.lower() or code == candidate:
-            return code
-    return None
 
 
 @app.route("/groundwater", methods=["GET", "POST"])
@@ -142,12 +113,8 @@ def states():
 @app.route("/districts/<path:state>")
 def districts(state):
     logger.info("District list requested for state=%s", state)
-    state_code = _resolve_state_code(state)
-    if state_code is None:
-        logger.warning("Could not resolve state code for %s", state)
-        return jsonify({"status": "error", "message": "Could not resolve state code"}), 400
-
-    url = f"{WRIS_API_BASE}/getAllDistrictListDataViewPage/{state_code}/"
+    encoded_state = requests.utils.requote_uri(state)
+    url = f"{WRIS_API_BASE}/getAllDistrictListDataViewPage/{encoded_state}/"
     response = _request_wris(url, method='get')
     if response is None:
         return jsonify({"status": "error", "message": "Could not fetch districts from WRIS"}), 502
