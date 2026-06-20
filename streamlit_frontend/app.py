@@ -586,7 +586,9 @@ def evaluate_research_metrics(y_true, y_pred):
     y_true = np.asarray(y_true, dtype=float)
     y_pred = np.asarray(y_pred, dtype=float)
     residuals = y_true - y_pred
-    spread = float(np.ptp(y_true)) or 1.0
+    gwl_min = float(np.nanmin(y_true)) if len(y_true) > 0 else np.nan
+    gwl_max = float(np.nanmax(y_true)) if len(y_true) > 0 else np.nan
+    spread = (gwl_max - gwl_min) if (not np.isnan(gwl_max) and not np.isnan(gwl_min)) else 0.0
     mean_true = float(np.mean(y_true)) or 1.0
 
     rmse = float(np.sqrt(np.mean(residuals ** 2)))
@@ -594,7 +596,7 @@ def evaluate_research_metrics(y_true, y_pred):
     mape = float(np.mean(np.abs(residuals / np.maximum(np.abs(y_true), 1e-6))) * 100)
     r2 = float(r2_score(y_true, y_pred)) if len(y_true) > 1 else np.nan
     nse = float(1.0 - np.sum(residuals ** 2) / np.sum((y_true - np.mean(y_true)) ** 2)) if len(y_true) > 1 and not np.isclose(np.sum((y_true - np.mean(y_true)) ** 2), 0.0) else np.nan
-    nrmse = float(rmse / spread)
+    nrmse = float(rmse / spread) if spread > 0 else np.nan
     pbias = float(100.0 * np.sum(y_pred - y_true) / np.maximum(np.sum(y_true), 1e-6))
     pearson_r = float(np.corrcoef(y_true, y_pred)[0, 1]) if len(y_true) > 1 and not np.allclose(np.std(y_true), 0.0) and not np.allclose(np.std(y_pred), 0.0) else np.nan
     bias = float(np.mean(y_pred - y_true))
@@ -618,6 +620,9 @@ def evaluate_research_metrics(y_true, y_pred):
         "PBIAS": pbias,
         "Pearson r": pearson_r,
         "Bias": bias,
+        "gwl_min": gwl_min,
+        "gwl_max": gwl_max,
+        "gwl_range": spread,
         "KGE": kge,
         "Alpha": alpha,
         "Beta": beta,
@@ -1537,6 +1542,12 @@ def render_national_aggregation_dashboard():
         if df_cm is not None:
             st.success(f"✓ Loaded confusion matrix ({len(df_cm)} entries)")
         
+        # Load feature <-> metric correlations if present
+        corr_file = os.path.join(output_dir, "feature_metric_correlations.csv")
+        df_corr = pd.read_csv(corr_file) if os.path.exists(corr_file) else None
+        if df_corr is not None:
+            st.success(f"✓ Loaded feature-metric correlations ({len(df_corr)} rows)")
+        
         # Load district rankings
         rankings_file = os.path.join(output_dir, "district_model_rankings.csv")
         df_rankings = pd.read_csv(rankings_file) if os.path.exists(rankings_file) else None
@@ -1650,11 +1661,19 @@ def render_national_aggregation_dashboard():
             fig_r2.update_layout(title="R² by Model (with std)", height=400, showlegend=False)
             _plotly_chart(fig_r2, key="r2_comparison")
         
-        # XGBoost Confusion Matrix
-        st.subheader("🎯 XGBoost Regime Classification Matrix")
+        # Regime Confusion Matrices (per-model when available)
+        st.subheader("🎯 Regime Classification Matrices and Accuracy")
+
+        # Try to use a precomputed confusion matrix CSV (generic)
         if df_cm is not None and len(df_cm) > 0:
             try:
-                pivot_cm = df_cm.pivot_table(index="Actual", columns="Pred", values="Count", fill_value=0)
+                pivot_cm = df_cm.pivot_table(index="Actual", columns="Pred", values="Count")
+                # ensure numeric and fill missing with zeros safely
+                pivot_cm = pivot_cm.fillna(0)
+                try:
+                    pivot_cm = pivot_cm.astype(int)
+                except Exception:
+                    pivot_cm = pivot_cm.apply(pd.to_numeric, errors='coerce').fillna(0).astype(int)
                 fig_cm = go.Figure(data=go.Heatmap(
                     z=pivot_cm.values,
                     x=pivot_cm.columns,
@@ -1669,6 +1688,147 @@ def render_national_aggregation_dashboard():
             except Exception as cm_err:
                 st.warning(f"Could not render confusion matrix heatmap: {cm_err}")
                 st.dataframe(df_cm, use_container_width=True)
+
+        # If a cleaned dataset exists, attempt to compute per-model confusion + accuracy
+        clean_file = os.path.join(output_dir, "cleaned_dataset_used_for_aggregation.csv")
+        df_clean = pd.read_csv(clean_file) if os.path.exists(clean_file) else None
+        df_regime_accuracy = None
+        df_regime_cm_by_model = None
+        if df_clean is not None:
+            cm_cols = [c for c in df_clean.columns if 'cm__' in c]
+            if cm_cols:
+                rows = []
+                for c in cm_cols:
+                    try:
+                        left, right = c.split('cm__', 1)
+                        model = left.rstrip('_').strip()
+                        # right looks like 'Actual Low__Pred Low' -> extract labels
+                        if '__Pred ' in right:
+                            actual_part, pred_part = right.split('__Pred ', 1)
+                        else:
+                            parts = right.split('__Pred')
+                            actual_part = parts[0]
+                            pred_part = parts[-1]
+                        actual = actual_part.replace('Actual', '').replace('__', '').strip().lstrip(':').strip()
+                        pred = pred_part.replace('__', '').strip()
+                        vals = pd.to_numeric(df_clean[c], errors='coerce').fillna(0)
+                        count = vals.sum()
+                        rows.append({'Model': model or 'model', 'Actual': actual or 'Unknown', 'Pred': pred or 'Unknown', 'Count': int(count)})
+                    except Exception:
+                        continue
+                if rows:
+                    df_regime_cm_by_model = pd.DataFrame(rows)
+                    try:
+                        df_regime_cm_by_model.to_csv(os.path.join(output_dir, 'regime_confusion_by_model.csv'), index=False)
+                    except Exception:
+                        pass
+
+                    # compute per-model accuracy/precision/recall/f1 (macro)
+                    metrics_rows = []
+                    for model, g in df_regime_cm_by_model.groupby('Model'):
+                        pivot = g.pivot_table(index='Actual', columns='Pred', values='Count', fill_value=0)
+                        total = pivot.values.sum()
+                        correct = 0
+                        for lab in pivot.index:
+                            if lab in pivot.columns:
+                                correct += pivot.at[lab, lab]
+                        accuracy = float(correct) / float(total) if total > 0 else np.nan
+                        precisions = []
+                        recalls = []
+                        for lab in pivot.index:
+                            tp = pivot.at[lab, lab] if lab in pivot.columns else 0
+                            fp = pivot[lab].sum() - tp if lab in pivot.columns else 0
+                            fn = pivot.loc[lab].sum() - tp
+                            prec = float(tp) / (tp + fp) if (tp + fp) > 0 else np.nan
+                            rec = float(tp) / (tp + fn) if (tp + fn) > 0 else np.nan
+                            precisions.append(prec)
+                            recalls.append(rec)
+                        precision_macro = float(np.nanmean([p for p in precisions if pd.notna(p)])) if any(pd.notna(precisions)) else np.nan
+                        recall_macro = float(np.nanmean([r for r in recalls if pd.notna(r)])) if any(pd.notna(recalls)) else np.nan
+                        f1s = [2 * p * r / (p + r) if (pd.notna(p) and pd.notna(r) and (p + r) > 0) else np.nan for p, r in zip(precisions, recalls)]
+                        f1_macro = float(np.nanmean([x for x in f1s if pd.notna(x)])) if any(pd.notna(f1s)) else np.nan
+                        metrics_rows.append({'Model': model, 'Accuracy': accuracy, 'Precision (macro)': precision_macro, 'Recall (macro)': recall_macro, 'F1 (macro)': f1_macro, 'Total': int(total)})
+                    df_regime_accuracy = pd.DataFrame(metrics_rows)
+                    try:
+                        df_regime_accuracy.to_csv(os.path.join(output_dir, 'regime_accuracy_table.csv'), index=False)
+                    except Exception:
+                        pass
+
+        # Render per-model confusion heatmaps and accuracy table if computed
+        if df_regime_cm_by_model is not None and len(df_regime_cm_by_model) > 0:
+            st.write("**Per-model confusion aggregates (computed from cleaned dataset)**")
+            for model, g in df_regime_cm_by_model.groupby('Model'):
+                st.markdown(f"**Model: {model}**")
+                pivot = g.pivot_table(index='Actual', columns='Pred', values='Count')
+                pivot = pivot.fillna(0)
+                try:
+                    pivot = pivot.astype(int)
+                except Exception:
+                    pivot = pivot.apply(pd.to_numeric, errors='coerce').fillna(0).astype(int)
+                fig_m = go.Figure(data=go.Heatmap(z=pivot.values, x=pivot.columns, y=pivot.index, colorscale='Blues', text=pivot.values, texttemplate="%{text}"))
+                fig_m.update_layout(height=350, title=f"Confusion: {model}")
+                _plotly_chart(fig_m, key=f"cm_{model}")
+                st.dataframe(pivot, use_container_width=True)
+
+        if df_regime_accuracy is not None and len(df_regime_accuracy) > 0:
+            st.write("**Regime classification accuracy summary**")
+            # Sanitize numeric columns to avoid Arrow overflow when Streamlit converts to Arrow
+            df_ra = df_regime_accuracy.sort_values('Accuracy', ascending=False).reset_index(drop=True).copy()
+            for col in df_ra.columns:
+                # attempt to coerce any column to numeric; if successful, keep as float and clean extremes
+                temp = pd.to_numeric(df_ra[col], errors='coerce')
+                if temp.notna().sum() == 0:
+                    # nothing numeric in this column
+                    continue
+                # convert to float for safe Arrow conversion
+                try:
+                    temp = temp.astype(float)
+                except Exception:
+                    temp = pd.to_numeric(temp, errors='coerce')
+
+                # remove infinities and non-finite
+                temp[~np.isfinite(temp)] = np.nan
+
+                # cap/clean very large magnitudes that may overflow Arrow (int64 limit ~9e18)
+                # use a conservative threshold to detect erroneous huge counts
+                huge_thresh = 1e12
+                try:
+                    temp[temp.abs() > huge_thresh] = np.nan
+                except Exception:
+                    pass
+
+                df_ra[col] = temp
+
+            st.dataframe(df_ra, use_container_width=True)
+
+        # Feature ↔ Metric correlations
+        st.subheader("🔗 Feature vs. Metric Correlations")
+        if df_corr is None:
+            st.write("No precomputed feature-metric correlations found. Run the aggregation script to generate `feature_metric_correlations.csv`.")
+        else:
+            # show top absolute correlations
+            df_corr['absR'] = df_corr['WeightedPearsonR'].abs()
+            topk = st.slider('Top features to show (by |r|)', min_value=5, max_value=100, value=20)
+            df_top = df_corr.sort_values('absR', ascending=False).head(topk)
+            st.dataframe(df_top[['Feature','Model','Metric','WeightedPearsonR','N_valid']].reset_index(drop=True), use_container_width=True)
+            # allow user to filter by model and metric
+            st.markdown('**Filter by model / metric**')
+            models_available = sorted(df_corr['Model'].unique())
+            metrics_available = sorted(df_corr['Metric'].unique())
+            sel_model = st.selectbox('Model', options=['ALL'] + models_available)
+            sel_metric = st.selectbox('Metric', options=['ALL'] + metrics_available)
+            mask = pd.Series(True, index=df_corr.index)
+            if sel_model != 'ALL':
+                mask &= df_corr['Model'] == sel_model
+            if sel_metric != 'ALL':
+                mask &= df_corr['Metric'] == sel_metric
+            df_filt = df_corr[mask].copy()
+            if df_filt.empty:
+                st.write('No feature correlations for this selection.')
+            else:
+                df_filt['absR'] = df_filt['WeightedPearsonR'].abs()
+                st.dataframe(df_filt.sort_values('absR', ascending=False).reset_index(drop=True), use_container_width=True)
+
         
         # Model ranking wins
         st.subheader("🏆 Model Win Frequencies (by District)")
@@ -1682,6 +1842,45 @@ def render_national_aggregation_dashboard():
                     fig_wins.add_trace(go.Bar(x=[model], y=[count], name=model, text=f"{pct:.1f}%", textposition="auto"))
                 fig_wins.update_layout(title="Districts Where Each Model Ranks #1", height=400, showlegend=False)
                 _plotly_chart(fig_wins, key="model_wins")
+
+        # IsolationForest / Anomaly density summaries
+        anom_file = os.path.join(output_dir, "anomaly_density_by_district.csv")
+        if os.path.exists(anom_file):
+            try:
+                df_anom = pd.read_csv(anom_file)
+                st.subheader("🧭 Anomaly Density (district-level)")
+                # try common column names
+                possible_cols = [c for c in df_anom.columns if 'anomaly' in c.lower() or 'isolation' in c.lower() or 'score' in c.lower()]
+                if len(possible_cols) == 0:
+                    st.write("No anomaly density column detected in anomaly file.")
+                else:
+                    col = possible_cols[0]
+                    fig_ad = go.Figure()
+                    fig_ad.add_trace(go.Histogram(x=df_anom[col].dropna(), nbinsx=40))
+                    fig_ad.update_layout(title=f"Distribution of {col}", height=350)
+                    _plotly_chart(fig_ad, key="anom_hist")
+                    st.write("Top anomalous districts")
+                    if 'district' in df_anom.columns:
+                        top = df_anom.sort_values(by=col, ascending=False).head(20)
+                        st.dataframe(top[['district', 'state', col]] if 'state' in df_anom.columns else top[['district', col]], use_container_width=True)
+                    # aggregate to state if possible
+                    state_col = None
+                    for cand in ['state', 'State', 'STATE']:
+                        if cand in df_anom.columns:
+                            state_col = cand
+                            break
+                    if state_col is not None:
+                        df_state_anom = df_anom.groupby(state_col)[col].mean().reset_index().rename(columns={col: 'anomaly_mean'})
+                        try:
+                            df_state_anom.to_csv(os.path.join(output_dir, 'anomaly_density_by_state.csv'), index=False)
+                        except Exception:
+                            pass
+                        st.subheader("Anomaly density by state (mean)")
+                        fig_state = go.Figure(go.Bar(x=df_state_anom[state_col], y=df_state_anom['anomaly_mean']))
+                        fig_state.update_layout(height=350)
+                        _plotly_chart(fig_state, key="anom_state")
+            except Exception as e:
+                st.warning(f"Could not load anomaly file: {e}")
         
         st.divider()
         
@@ -1748,6 +1947,20 @@ def render_national_aggregation_dashboard():
                     file_name="district_model_rankings.csv",
                     mime="text/csv"
                 )
+        # extra downloads (regime accuracy, anomaly state)
+        cols_extra = st.columns(3)
+        with cols_extra[0]:
+            ra_file = os.path.join(output_dir, 'regime_accuracy_table.csv')
+            if os.path.exists(ra_file):
+                st.download_button('📈 Regime Accuracy', data=open(ra_file,'rb').read(), file_name='regime_accuracy_table.csv', mime='text/csv')
+        with cols_extra[1]:
+            rcm_file = os.path.join(output_dir, 'regime_confusion_by_model.csv')
+            if os.path.exists(rcm_file):
+                st.download_button('🎯 Regime Confusions (by model)', data=open(rcm_file,'rb').read(), file_name='regime_confusion_by_model.csv', mime='text/csv')
+        with cols_extra[2]:
+            an_state_file = os.path.join(output_dir, 'anomaly_density_by_state.csv')
+            if os.path.exists(an_state_file):
+                st.download_button('🧭 Anomaly by State', data=open(an_state_file,'rb').read(), file_name='anomaly_density_by_state.csv', mime='text/csv')
         
     except Exception as e:
         error_type = type(e).__name__

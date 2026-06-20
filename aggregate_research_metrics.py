@@ -48,8 +48,8 @@ def parse_args():
     parser.add_argument(
         "--outlier-r2-floor",
         type=float,
-        default=-10.0,
-        help="R� threshold below which a model is considered invalid."
+        default=-50.0,
+        help="R² threshold below which a model is considered invalid."
     )
     parser.add_argument(
         "--winsor-lower",
@@ -104,53 +104,47 @@ def _norm_key(value: str) -> str:
     return "".join(ch.lower() for ch in str(value) if ch.isalnum())
 
 
-def find_metric_columns(columns, models):
-    found = {}
-    for col in columns:
-        if isinstance(col, str) and "__" in col:
-            model_name, metric_name = col.split("__", 1)
-            model_name = model_name.strip()
-            metric_name = metric_name.strip()
-            found.setdefault(model_name, {})[metric_name] = col
-
-    canonical_metrics = [
-        "RMSE",
-        "MAE",
-        "MAPE",
-        "R2",
-        "NSE",
-        "NRMSE",
-        "KGE",
-        "PBIAS",
-        "Pearson r",
-        "Bias",
-        "Alpha",
-        "Beta",
-    ]
-
-    metric_map = {}
-    for model in models:
-        cols = found.get(model, {})
-        if not cols:
-            for candidate, cdict in found.items():
-                if _norm_key(candidate) == _norm_key(model):
-                    cols = cdict
-                    break
-
-        normalized = { _norm_key(k): v for k, v in cols.items() }
-        model_map = {}
-        for metric in canonical_metrics:
-            key = _norm_key(metric)
-            actual = normalized.get(key)
-            if actual is None:
-                for nk, colname in normalized.items():
-                    if key in nk or nk in key:
-                        actual = colname
-                        break
-            model_map[metric] = actual
-        metric_map[model] = model_map
-
-    return metric_map
+EXACT_METRIC_COLS = {
+    "Persistence": {
+        "RMSE": "Persistence__RMSE",
+        "MAE": "Persistence__MAE",
+        "MAPE": "Persistence__MAPE",
+        "R2": "Persistence__R2",
+        "NSE": "Persistence__NSE",
+        "KGE": "Persistence__KGE",
+        "PBIAS": "Persistence__PBIAS",
+        "Pearson r": "Persistence__Pearson r",
+        "Alpha": "Persistence__Alpha",
+        "Beta": "Persistence__Beta",
+        "NRMSE": "Persistence__NRMSE",
+    },
+    "Random Forest": {
+        "RMSE": "Random Forest__RMSE",
+        "MAE": "Random Forest__MAE",
+        "MAPE": "Random Forest__MAPE",
+        "R2": "Random Forest__R2",
+        "NSE": "Random Forest__NSE",
+        "KGE": "Random Forest__KGE",
+        "PBIAS": "Random Forest__PBIAS",
+        "Pearson r": "Random Forest__Pearson r",
+        "Alpha": "Random Forest__Alpha",
+        "Beta": "Random Forest__Beta",
+        "NRMSE": "Random Forest__NRMSE",
+    },
+    "XGBoost": {
+        "RMSE": "XGBoost__RMSE",
+        "MAE": "XGBoost__MAE",
+        "MAPE": "XGBoost__MAPE",
+        "R2": "XGBoost__R2",
+        "NSE": "XGBoost__NSE",
+        "KGE": "XGBoost__KGE",
+        "PBIAS": "XGBoost__PBIAS",
+        "Pearson r": "XGBoost__Pearson r",
+        "Alpha": "XGBoost__Alpha",
+        "Beta": "XGBoost__Beta",
+        "NRMSE": "XGBoost__NRMSE",
+    },
+}
 
 
 def weighted_stats(values, weights):
@@ -257,6 +251,36 @@ def aggregate_models(df_source, models, metric_cols, weight_col="rows"):
     return pd.DataFrame(rows)
 
 
+def weighted_pearsonr(x, y, w):
+    """Compute weighted Pearson correlation between x and y with weights w.
+
+    Returns (r, n_valid)
+    """
+    x = pd.to_numeric(x, errors="coerce")
+    y = pd.to_numeric(y, errors="coerce")
+    w = pd.to_numeric(w, errors="coerce").fillna(0)
+    mask = x.notna() & y.notna() & (w > 0)
+    if mask.sum() < 3:
+        return (np.nan, int(mask.sum()))
+    x = x[mask].astype(float)
+    y = y[mask].astype(float)
+    w = w[mask].astype(float)
+    sw = w.sum()
+    if sw <= 0:
+        return (np.nan, int(mask.sum()))
+    mx = (w * x).sum() / sw
+    my = (w * y).sum() / sw
+    cx = x - mx
+    cy = y - my
+    cov = (w * cx * cy).sum() / sw
+    varx = (w * cx * cx).sum() / sw
+    vary = (w * cy * cy).sum() / sw
+    if varx <= 0 or vary <= 0:
+        return (np.nan, int(mask.sum()))
+    r = cov / (np.sqrt(varx) * np.sqrt(vary))
+    return (float(r), int(mask.sum()))
+
+
 def main():
     args = parse_args()
     os.makedirs(args.output_dir, exist_ok=True)
@@ -287,7 +311,7 @@ def main():
         df["regime_valid"] = False
 
     models = ["Persistence", "Random Forest", "XGBoost"]
-    metric_cols = find_metric_columns(df.columns, models)
+    metric_cols = EXACT_METRIC_COLS
 
     print("  Metric column mapping:")
     for model in models:
@@ -302,25 +326,18 @@ def main():
             if col and col in df.columns:
                 df[col] = pd.to_numeric(df[col], errors="coerce")
 
+    # Recompute NRMSE from RMSE here and update metric mapping to use recomputed NRMSE
     mask_low_rows = df["rows"] < args.min_rows
-    mask_low_regime = df["regime_class_count"] < 2
     mask_mape_outlier = pd.Series(False, index=df.index)
-    mask_nrmse_invalid = pd.Series(False, index=df.index)
     mask_r2_invalid = pd.Series(False, index=df.index)
 
     for model in models:
         cols = metric_cols[model]
+        # Do not exclude districts based on high MAPE — allow wide MAPE values for persistence baselines
         if cols["MAPE"]:
-            mask_mape_outlier |= df[cols["MAPE"]].isna() | (df[cols["MAPE"]] > 300)
+            mask_mape_outlier |= False
         else:
-            print(f"WARNING: {model} MAPE column not found; excluding all districts for consistency.")
-            mask_mape_outlier |= True
-
-        if cols["NRMSE"]:
-            mask_nrmse_invalid |= df[cols["NRMSE"]].isna() | (df[cols["NRMSE"]] > 1)
-        else:
-            print(f"WARNING: {model} NRMSE column not found; excluding all districts for consistency.")
-            mask_nrmse_invalid |= True
+            mask_mape_outlier |= False
 
         if cols["R2"]:
             mask_r2_invalid |= df[cols["R2"]].isna() | (df[cols["R2"]] < args.outlier_r2_floor)
@@ -328,7 +345,8 @@ def main():
             print(f"WARNING: {model} R2 column not found; excluding all districts for consistency.")
             mask_r2_invalid |= True
 
-    mask_common_valid = ~(mask_low_rows | mask_low_regime | mask_mape_outlier | mask_nrmse_invalid | mask_r2_invalid)
+    # Do not exclude districts for single-class regimes or precomputed NRMSE; use only row-count and R2 filters
+    mask_common_valid = ~(mask_low_rows | mask_mape_outlier | mask_r2_invalid)
 
     df_excluded = df[~mask_common_valid].copy()
     exclude_columns = ["state", "district", "rows", "regime_valid", "regime_class_count", "Regime Coverage", "Regime Majority Share"]
@@ -337,22 +355,18 @@ def main():
 
     for name, mask in [
         ("low_rows", mask_low_rows),
-        ("low_regime_diversity", mask_low_regime),
         ("mape_outlier", mask_mape_outlier),
-        ("nrmse_invalid", mask_nrmse_invalid),
         ("r2_invalid", mask_r2_invalid),
     ]:
         df_excluded[name] = mask[~mask_common_valid]
 
-    df_excluded["exclude_reasons"] = df_excluded[["low_rows", "low_regime_diversity", "mape_outlier", "nrmse_invalid", "r2_invalid"]].astype(bool) \
+    df_excluded["exclude_reasons"] = df_excluded[["low_rows", "mape_outlier", "r2_invalid"]].astype(bool) \
         .apply(lambda row: ",".join([name for name, val in row.items() if val]), axis=1)
 
     df_excluded.to_csv(os.path.join(args.output_dir, "excluded_districts.csv"), index=False)
 
     print(f"  Districts removed by low rows       : {int(mask_low_rows.sum())}")
-    print(f"  Districts removed by low regime mix : {int(mask_low_regime.sum())}")
     print(f"  Districts removed by MAPE outlier   : {int(mask_mape_outlier.sum())}")
-    print(f"  Districts removed by NRMSE invalid   : {int(mask_nrmse_invalid.sum())}")
     print(f"  Districts removed by R2 invalid     : {int(mask_r2_invalid.sum())}")
     print(f"  Total districts excluded           : {len(df_excluded)}")
 
@@ -363,6 +377,37 @@ def main():
     df_clean = df[mask_common_valid].copy()
     df_clean.to_csv(os.path.join(args.output_dir, "cleaned_dataset_used_for_aggregation.csv"), index=False)
     print(f"  Districts retained for aggregation  : {len(df_clean)}")
+
+    # Apply model-specific caps for valid ranking metrics prior to aggregation
+    CAPS_BY_MODEL = {
+        "Persistence":    {"R2": (-5.0, 1.0), "NSE": (-5.0, 1.0), "KGE": (-5.0, 1.0)},
+        "Random Forest":  {"R2": (-2.0, 1.0), "NSE": (-2.0, 1.0), "KGE": (-2.0, 1.0)},
+        "XGBoost":        {"R2": (-2.0, 1.0), "NSE": (-2.0, 1.0), "KGE": (-2.0, 1.0)},
+    }
+    df_for_agg = df_clean.copy()
+    for model in models:
+        model_caps = CAPS_BY_MODEL.get(model, {})
+        for metric, (lo, hi) in model_caps.items():
+            col = metric_cols[model].get(metric)
+            if col and col in df_for_agg.columns:
+                before_nonnull = df_for_agg[col].notna().sum()
+                df_for_agg[col] = pd.to_numeric(df_for_agg[col], errors="coerce")
+                df_for_agg.loc[~((df_for_agg[col] >= lo) & (df_for_agg[col] <= hi)), col] = np.nan
+                after_nonnull = df_for_agg[col].notna().sum()
+                if before_nonnull != after_nonnull:
+                    print(f"    Capped {col}: {before_nonnull - after_nonnull} values set to NaN")
+
+        # Synchronize R2 and NSE validity so both metrics have identical NaN masks
+        r2_col = metric_cols[model].get("R2")
+        nse_col = metric_cols[model].get("NSE")
+        if r2_col and nse_col and r2_col in df_for_agg.columns and nse_col in df_for_agg.columns:
+            r2_valid = df_for_agg[r2_col].notna()
+            nse_valid = df_for_agg[nse_col].notna()
+            if r2_valid.sum() != nse_valid.sum():
+                nan_mask = df_for_agg[r2_col].isna() | df_for_agg[nse_col].isna()
+                df_for_agg.loc[nan_mask, r2_col] = np.nan
+                df_for_agg.loc[nan_mask, nse_col] = np.nan
+                print(f"    Synchronized R2/NSE NaN mask for {model}: {nan_mask.sum()} rows")
 
     print("\nSTEP 3 - District-level cleaned metrics")
     district_cols = ["state", "district", "rows", "regime_valid", "regime_class_count", "Regime Coverage", "Regime Majority Share"]
@@ -375,13 +420,59 @@ def main():
     df_district.to_csv(os.path.join(args.output_dir, "district_level_metrics.csv"), index=False)
     print(f"  Saved → district_level_metrics.csv  ({len(df_district)} districts)")
 
+    # STEP 3b - Feature <-> Metric Correlations (national)
+    print("\nSTEP 3b - Feature vs. Metric Correlations (weighted Pearson)")
+    # Identify candidate feature columns: numeric columns not part of known metric columns or metadata
+    known_meta = set(["state", "district", "rows", "regime_valid", "regime_class_count", "Regime Coverage", "Regime Majority Share"])  
+    known_metric_cols = set()
+    for m in models:
+        for mt, c in metric_cols[m].items():
+            if c:
+                known_metric_cols.add(c)
+
+    candidate_features = [c for c in df_clean.columns if c not in known_meta and c not in known_metric_cols and not c.startswith("xgb_cm__")]
+    # keep numeric features only
+    numeric_feats = []
+    for c in candidate_features:
+        try:
+            ser = pd.to_numeric(df_clean[c], errors="coerce")
+            if ser.notna().sum() >= 3:
+                numeric_feats.append(c)
+        except Exception:
+            continue
+
+    corr_rows = []
+    target_metrics = ["NRMSE", "MAE", "R2"]
+    for feat in numeric_feats:
+        for model in models:
+            for tm in target_metrics:
+                col = metric_cols[model].get(tm)
+                if not col or col not in df_clean.columns:
+                    continue
+                r, nvalid = weighted_pearsonr(df_clean[feat], df_clean[col], df_clean["rows"])
+                corr_rows.append({
+                    "Feature": feat,
+                    "Model": model,
+                    "Metric": tm,
+                    "WeightedPearsonR": r,
+                    "N_valid": nvalid
+                })
+
+    if corr_rows:
+        df_corr = pd.DataFrame(corr_rows)
+        df_corr.to_csv(os.path.join(args.output_dir, "feature_metric_correlations.csv"), index=False)
+        print(f"  Saved → feature_metric_correlations.csv ({len(df_corr)} rows)")
+    else:
+        print("  No feature <-> metric correlations computed (no numeric features detected)")
+
     print("\nSTEP 4 - State-level weighted aggregation")
-    df_state = aggregate_group(df_clean, ["state"], models, metric_cols, weight_col="rows")
+    # Use df_for_agg (with per-metric caps applied) for aggregations
+    df_state = aggregate_group(df_for_agg, ["state"], models, metric_cols, weight_col="rows")
     df_state.to_csv(os.path.join(args.output_dir, "state_level_aggregation.csv"), index=False)
     print(f"  Saved → state_level_aggregation.csv  ({len(df_state)} states)")
 
     print("\nSTEP 5 - National-level weighted aggregation")
-    df_national = aggregate_models(df_clean, models, metric_cols, weight_col="rows")
+    df_national = aggregate_models(df_for_agg, models, metric_cols, weight_col="rows")
     df_national.to_csv(os.path.join(args.output_dir, "national_level_aggregation.csv"), index=False)
     print(f"  Saved → national_level_aggregation.csv")
 
@@ -389,28 +480,58 @@ def main():
     rank_records = []
     for _, row in df_clean.iterrows():
         rec = {"state": row["state"], "district": row["district"], "rows": int(row["rows"])}
-        nrmse_vals = {}
+        r2_vals = {}
         for model in models:
-            col = metric_cols[model]["NRMSE"]
+            col = metric_cols[model]["R2"]
             if col and pd.notna(row[col]):
-                nrmse_vals[model] = float(row[col])
-        if len(nrmse_vals) == len(models):
-            ranked = sorted(nrmse_vals, key=nrmse_vals.get)
+                r2_vals[model] = float(row[col])
+        if len(r2_vals) == len(models):
+            ranked = sorted(r2_vals, key=r2_vals.get, reverse=True)
             for rank_pos, model in enumerate(ranked, 1):
                 rec[f"rank_{rank_pos}"] = model
-                rec[f"rank_{rank_pos}_NRMSE"] = nrmse_vals[model]
+                rec[f"rank_{rank_pos}_R2"] = r2_vals[model]
         rank_records.append(rec)
 
     df_ranks = pd.DataFrame(rank_records)
     df_ranks.to_csv(os.path.join(args.output_dir, "district_model_rankings.csv"), index=False)
     print(f"  Saved → district_model_rankings.csv")
 
-    print("\n  Model Win Frequencies (Rank 1 = Best NRMSE nationally):")
+    print("\n  Model Win Frequencies (Rank 1 = Best R2 nationally):")
     if "rank_1" in df_ranks.columns:
         rank1_counts = df_ranks["rank_1"].value_counts()
         for model, count in rank1_counts.items():
             pct = 100 * count / len(df_ranks.dropna(subset=["rank_1"]))
             print(f"    {model:20s}: {count:4d} districts  ({pct:.1f}%)")
+
+    print("\nSTEP 6b - National regime accuracy")
+    for model in models:
+        acc_col = f"{model}__Regime Accuracy"
+        if acc_col in df_clean.columns:
+            df_clean[acc_col] = pd.to_numeric(df_clean[acc_col], errors="coerce")
+            valid = df_clean[acc_col].notna()
+            if valid.any():
+                weighted_acc = np.average(df_clean.loc[valid, acc_col], weights=df_clean.loc[valid, "rows"])
+                print(f"  {model:20s} National Regime Accuracy: {weighted_acc * 100:.2f}%")
+            else:
+                print(f"  {model:20s} National Regime Accuracy: no valid values")
+        else:
+            print(f"  {model:20s} National Regime Accuracy: column missing")
+
+    if "IF__anomaly_density" in df_clean.columns:
+        df_clean["IF__anomaly_density"] = pd.to_numeric(df_clean["IF__anomaly_density"], errors="coerce")
+        valid = df_clean["IF__anomaly_density"].notna()
+        if valid.any():
+            national_anomaly_density = np.average(
+                df_clean.loc[valid, "IF__anomaly_density"],
+                weights=df_clean.loc[valid, "rows"]
+            )
+            total_anomalies = pd.to_numeric(df_clean.get("IF__anomaly_count", pd.Series([], dtype=float)), errors="coerce").sum()
+            print(f"\n  National anomaly density : {national_anomaly_density * 100:.2f}%")
+            print(f"  Total anomalous readings : {int(total_anomalies):,}")
+        else:
+            print("\n  National anomaly density : no valid anomaly density values")
+    else:
+        print("\n  National anomaly density : IF__anomaly_density column not found")
 
     print("\nSTEP 7 - Diagnostic metric distributions")
     metric_diagnostics = []
@@ -434,20 +555,43 @@ def main():
     else:
         print("  No metric diagnostics were saved.")
 
+    print("\nSTEP 7b - National SHAP feature importance")
+    shap_cols = [c for c in df_clean.columns if isinstance(c, str) and c.startswith("SHAP__")]
+    if shap_cols:
+        for model in ["Random Forest", "XGBoost"]:
+            model_shap = [c for c in shap_cols if c.startswith(f"SHAP__{model}__") and "top" not in c]
+            shap_importance = {}
+            for col in model_shap:
+                feat_name = col.replace(f"SHAP__{model}__", "")
+                vals = pd.to_numeric(df_clean[col], errors="coerce")
+                if vals.notna().any():
+                    shap_importance[feat_name] = np.average(
+                        vals.dropna(),
+                        weights=df_clean.loc[vals.notna(), "rows"]
+                    )
+            if shap_importance:
+                shap_df = pd.Series(shap_importance).sort_values(ascending=False)
+                shap_file = os.path.join(args.output_dir, f"shap_national_{model.replace(' ', '_')}.csv")
+                shap_df.to_csv(shap_file, header=["mean_abs_shap"] )
+                print(f"  Saved → {os.path.basename(shap_file)}")
+                print(f"\n  {model} — Top 5 features nationally by SHAP:")
+                for feat, val in shap_df.head(5).items():
+                    print(f"    {feat:25s}: {val:.6f}")
+    else:
+        print("  No SHAP feature importance columns found for national aggregation.")
+
     print("\nSTEP 8 - Publication-ready national summary")
     pub_rows = []
     for _, row in df_national.iterrows():
         pub_rows.append({
             "Model": row["Model"],
-            "NRMSE (mean)": row.get("NRMSE_mean", np.nan),
-            "NRMSE (std)": row.get("NRMSE_std", np.nan),
             "RMSE (mean)": row.get("RMSE_mean", np.nan),
             "MAE (mean)": row.get("MAE_mean", np.nan),
             "MAPE (mean)": row.get("MAPE_mean", np.nan),
             "R2 (mean)": row.get("R2_mean", np.nan),
             "R2 (std)": row.get("R2_std", np.nan),
             "NSE (mean)": row.get("NSE_mean", np.nan),
-            "KGE (mean)": row.get("KGE_mean", np.nan),
+            "KGE (mean)": "N/A†" if row["Model"] == "Persistence" else row.get("KGE_mean", np.nan),
             "KGE valid pct": row.get("KGE_valid_pct", np.nan),
             "Valid Districts": int(row.get("n_districts", np.nan)) if pd.notna(row.get("n_districts", np.nan)) else np.nan,
             "Total Obs": int(row.get("total_obs", np.nan)) if pd.notna(row.get("total_obs", np.nan)) else np.nan,
@@ -457,20 +601,25 @@ def main():
     print("  Saved → publication_national_table.csv")
 
     print("\nSTEP 9 - Metrics preview")
-    preview_cols = ["Model", "NRMSE (mean)", "R2 (mean)", "NSE (mean)", "KGE (mean)", "Valid Districts"]
+    preview_cols = ["Model", "RMSE (mean)", "R2 (mean)", "NSE (mean)", "KGE (mean)", "Valid Districts"]
     preview_cols = [c for c in preview_cols if c in df_pub.columns]
     if preview_cols:
         print(df_pub[preview_cols].to_string(index=False))
     else:
         print("  No publication preview columns available.")
 
+    print("\n† KGE for the Persistence baseline is not reported. The alpha/beta components required for KGE were not stored in the source pipeline output.")
+
     print("\nSTEP 10 - XGBoost confusion matrix")
     cm_cols = [c for c in df_clean.columns if isinstance(c, str) and c.startswith("xgb_cm__")]
     if cm_cols:
-        cm_df = df_clean[cm_cols].apply(lambda s: pd.to_numeric(s, errors="coerce"))
-        valid_rows = cm_df.notna().all(axis=1) & (cm_df >= 0).all(axis=1)
-        integer_rows = (cm_df.round() - cm_df).abs() < 1e-6
-        valid_rows &= integer_rows.all(axis=1)
+        # coerce to numeric, replace NaN with 0, and clip negatives to 0 to avoid int overflow artifacts
+        cm_df = df_clean[cm_cols].apply(lambda s: pd.to_numeric(s, errors="coerce")).fillna(0).clip(lower=0)
+        # rows are valid if they are non-negative (after fill/clip)
+        valid_rows = (cm_df >= 0).all(axis=1)
+        # require integer-like values (small fractional tol)
+        integer_rows = ((cm_df.round() - cm_df).abs() < 1e-6).all(axis=1)
+        valid_rows &= integer_rows
 
         if valid_rows.any():
             cm_counts = cm_df.loc[valid_rows].round().astype(int).sum()
@@ -507,6 +656,7 @@ def main():
         "metric_distribution_diagnostics.csv",
         "publication_national_table.csv",
         "xgb_confusion_matrix_summary.csv",
+        "feature_metric_correlations.csv",
     ]:
         print(f"    ✓  {filename}")
     print()

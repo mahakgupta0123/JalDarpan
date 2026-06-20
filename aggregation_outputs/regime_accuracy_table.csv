@@ -1,0 +1,2 @@
+Model,Accuracy,Precision (macro),Recall (macro),F1 (macro),Total
+xgb,,0.9239965497335187,4.982486942114896,,-10561343188146401050624
