@@ -1559,6 +1559,32 @@ def render_national_aggregation_dashboard():
         df_excluded = pd.read_csv(excluded_file) if os.path.exists(excluded_file) else None
         if df_excluded is not None:
             st.success(f"✓ Loaded excluded districts ({len(df_excluded)} excluded)")
+
+        # Load national SHAP summaries if present
+        def _load_shap_file(path):
+            if not os.path.exists(path):
+                return None
+            try:
+                df = pd.read_csv(path, index_col=0)
+            except Exception:
+                try:
+                    df = pd.read_csv(path)
+                except Exception:
+                    return None
+            if df.index.name is not None:
+                df = df.reset_index().rename(columns={df.columns[0]: "Feature"})
+            elif "Unnamed: 0" in df.columns:
+                df = df.rename(columns={"Unnamed: 0": "Feature"})
+            return df
+
+        shap_rf_file = os.path.join(output_dir, "shap_national_Random_Forest.csv")
+        shap_xgb_file = os.path.join(output_dir, "shap_national_XGBoost.csv")
+        df_shap_rf = _load_shap_file(shap_rf_file)
+        df_shap_xgb = _load_shap_file(shap_xgb_file)
+        if df_shap_rf is not None:
+            st.success(f"✓ Loaded national SHAP importance for Random Forest ({len(df_shap_rf)} features)")
+        if df_shap_xgb is not None:
+            st.success(f"✓ Loaded national SHAP importance for XGBoost ({len(df_shap_xgb)} features)")
         
         st.divider()
         
@@ -1801,6 +1827,18 @@ def render_national_aggregation_dashboard():
 
             st.dataframe(df_ra, use_container_width=True)
 
+        # National SHAP feature importance
+        st.subheader("🧠 National SHAP feature importance")
+        if df_shap_rf is None and df_shap_xgb is None:
+            st.write("No national SHAP files were found. Run the aggregation script to generate shap_national_Random_Forest.csv and shap_national_XGBoost.csv.")
+        else:
+            if df_shap_rf is not None:
+                st.markdown("#### Random Forest")
+                st.dataframe(df_shap_rf.sort_values('mean_abs_shap', ascending=False).head(20), use_container_width=True)
+            if df_shap_xgb is not None:
+                st.markdown("#### XGBoost")
+                st.dataframe(df_shap_xgb.sort_values('mean_abs_shap', ascending=False).head(20), use_container_width=True)
+
         # Feature ↔ Metric correlations
         st.subheader("🔗 Feature vs. Metric Correlations")
         if df_corr is None:
@@ -1844,15 +1882,28 @@ def render_national_aggregation_dashboard():
                 _plotly_chart(fig_wins, key="model_wins")
 
         # IsolationForest / Anomaly density summaries
-        anom_file = os.path.join(output_dir, "anomaly_density_by_district.csv")
+        anom_file = os.path.join(output_dir, 'anomaly_density_by_district.csv')
+        df_anom = None
         if os.path.exists(anom_file):
             try:
                 df_anom = pd.read_csv(anom_file)
+                st.success(f"✓ Loaded anomaly density file ({len(df_anom)} districts)")
+            except Exception as e:
+                st.warning(f"Could not read anomaly density file: {e}")
+
+        if df_anom is None and df_clean is not None:
+            # fallback: derive anomaly density from cleaned dataset if explicit anomaly file is missing
+            candidate_cols = [c for c in df_clean.columns if c.lower().startswith('if__anomaly_density') or c.lower().startswith('if__anomaly_count')]
+            if 'district' in df_clean.columns and candidate_cols:
+                df_anom = df_clean[['state', 'district'] + [c for c in candidate_cols if c in df_clean.columns]].copy()
+                st.info("Fallback: using cleaned aggregation dataset to derive anomaly density summaries.")
+
+        if df_anom is not None:
+            try:
                 st.subheader("🧭 Anomaly Density (district-level)")
-                # try common column names
                 possible_cols = [c for c in df_anom.columns if 'anomaly' in c.lower() or 'isolation' in c.lower() or 'score' in c.lower()]
                 if len(possible_cols) == 0:
-                    st.write("No anomaly density column detected in anomaly file.")
+                    st.write("No anomaly density column detected in anomaly data.")
                 else:
                     col = possible_cols[0]
                     fig_ad = go.Figure()
@@ -1863,7 +1914,6 @@ def render_national_aggregation_dashboard():
                     if 'district' in df_anom.columns:
                         top = df_anom.sort_values(by=col, ascending=False).head(20)
                         st.dataframe(top[['district', 'state', col]] if 'state' in df_anom.columns else top[['district', col]], use_container_width=True)
-                    # aggregate to state if possible
                     state_col = None
                     for cand in ['state', 'State', 'STATE']:
                         if cand in df_anom.columns:
@@ -1880,8 +1930,10 @@ def render_national_aggregation_dashboard():
                         fig_state.update_layout(height=350)
                         _plotly_chart(fig_state, key="anom_state")
             except Exception as e:
-                st.warning(f"Could not load anomaly file: {e}")
-        
+                st.warning(f"Could not load anomaly data: {e}")
+        else:
+            st.warning("No anomaly density output was found. Run the aggregation script or ensure anomaly density columns exist in the cleaned dataset.")
+
         st.divider()
         
         # Summary statistics
