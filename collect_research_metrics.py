@@ -255,12 +255,12 @@ def evaluate_research_metrics(y_true, y_pred, model_name=None, district=None):
     rmse = float(np.sqrt(np.mean(residuals ** 2)))
     mae = float(np.mean(np.abs(residuals)))
 
-    # FIX 2: use corrected MAPE (excludes near-zero denominators properly)
+    # FIX 2: corrected MAPE
     mape = compute_mape(y_true, y_pred)
 
     r2 = float(r2_score(y_true, y_pred)) if len(y_true) > 1 else np.nan
 
-    # FIX 4: mNSE is now genuinely different from R²
+    # FIX 4: mNSE genuinely different from R²
     mnse = compute_mnse(y_true, y_pred)
 
     if gwl_range > 0:
@@ -277,37 +277,41 @@ def evaluate_research_metrics(y_true, y_pred, model_name=None, district=None):
     )
     bias = float(np.mean(y_pred - y_true))
 
+    # ── KGE and its components (FIX 5) ───────────────────────────────────────
+    # Compute std once — used for both Pearson r and alpha
     std_true = float(np.std(y_true))
     std_pred = float(np.std(y_pred))
+    is_constant_pred = np.isclose(std_pred, 0.0)
 
-    # Pearson r — safe guard
-    if len(y_true) > 1 and not np.isclose(std_true, 0.0) and not np.isclose(std_pred, 0.0):
-        pearson_r = float(np.corrcoef(y_true, y_pred)[0, 1])
-    else:
-        pearson_r = np.nan
+    if len(y_true) > 1 and not np.isclose(std_true, 0.0):
+        if is_constant_pred:
+            # Constant predictor (e.g. Persistence):
+            # r=0 by definition (no co-variation), alpha=0 (no variability)
+            pearson_r = 0.0
+            alpha = 0.0
+        else:
+            pearson_r = float(np.corrcoef(y_true, y_pred)[0, 1])
+            alpha = std_pred / std_true
 
-    # FIX 5: KGE for constant predictors (persistence) was NaN due to
-    # std_pred == 0 guard. Alpha = 0 is a valid and meaningful result —
-    # it tells us the model has zero variability. KGE will be strongly
-    # negative for persistence, which is exactly what we want to show.
-    if len(y_true) > 1 and not np.isclose(std_true, 0.0) and not np.isnan(pearson_r):
         if mean_true != 0:
-            alpha = std_pred / std_true          # variability ratio
-            beta = np.mean(y_pred) / mean_true   # bias ratio
-            # alpha=0 is allowed (constant predictor); KGE will be ~-0.41
-            kge = float(
-                1.0
-                - np.sqrt(
-                    (pearson_r - 1.0) ** 2
-                    + (alpha - 1.0) ** 2
-                    + (beta - 1.0) ** 2
+            beta = float(np.mean(y_pred) / mean_true)
+            if abs(beta) > 10:
+                # Degenerate district — mean_true ≈ 0 causes beta overflow
+                kge = np.nan
+            else:
+                kge = float(
+                    1.0 - np.sqrt(
+                        (pearson_r - 1.0) ** 2
+                        + (alpha - 1.0) ** 2
+                        + (beta - 1.0) ** 2
+                    )
                 )
-            )
         else:
             alpha = np.nan
             beta = np.nan
             kge = np.nan
     else:
+        pearson_r = np.nan
         alpha = np.nan
         beta = np.nan
         kge = np.nan
@@ -317,12 +321,12 @@ def evaluate_research_metrics(y_true, y_pred, model_name=None, district=None):
         "MAE": mae,
         "MAPE": mape,
         "R2": r2,
-        "mNSE": mnse,        # FIX 4: was "NSE" (= R²), now modified NSE
+        "mNSE": mnse,
         "NRMSE": nrmse,
         "PBIAS": pbias,
         "Pearson r": pearson_r,
         "Bias": bias,
-        "KGE": kge,          # FIX 5: no longer NaN for persistence
+        "KGE": kge,
         "Alpha": alpha,
         "Beta": beta,
         "gwl_min": gwl_min,

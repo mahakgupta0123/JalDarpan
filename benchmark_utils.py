@@ -42,7 +42,7 @@ def build_pooled_summaries(runs_df):
             values = target_df[col].astype(float, errors="ignore").fillna(0.0)
             if metric_name in {"RMSE", "MAE", "MAPE", "PBIAS", "Bias"}:
                 row[metric_name] = float((values * weight).sum() / max(weight.sum(), 1.0))
-            elif metric_name in {"R2", "NSE", "Pearson r", "KGE", "Regime Acc", "Regime Coverage", "Regime Majority Share"}:
+            elif metric_name in {"R2", "mNSE", "Pearson r", "KGE", "Regime Acc", "Regime Coverage", "Regime Majority Share"}:
                 row[metric_name] = float((values * weight).sum() / max(weight.sum(), 1.0))
             else:
                 row[metric_name] = float(values.median()) if not values.empty else float("nan")
@@ -54,7 +54,7 @@ def build_pooled_summaries(runs_df):
     if "XGBoost" in model_names:
         for actual_label in xgb_cm.index:
             for pred_label in xgb_cm.columns:
-                col_name = f"xgb_cm__{actual_label}__{pred_label}"
+                col_name = f"XGBoost_cm__{actual_label}__{pred_label}"
                 if col_name in runs_df.columns:
                     xgb_cm.loc[actual_label, pred_label] = int(runs_df[col_name].fillna(0).sum())
 
