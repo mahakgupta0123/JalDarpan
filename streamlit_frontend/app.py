@@ -1596,7 +1596,8 @@ def render_national_aggregation_dashboard():
             with col1:
                 rf_rows = df_pub[df_pub['Model'] == 'Random Forest']
                 if len(rf_rows) > 0:
-                    rf_nrmse = rf_rows['NRMSE (mean)'].iloc[0]
+                    # FIXED — safe fallback if column missing
+                    rf_nrmse  = rf_rows['NRMSE (mean)'].iloc[0]  if 'NRMSE (mean)' in rf_rows.columns  else np.nan
                     st.metric("RF NRMSE", f"{rf_nrmse:.4f}" if pd.notna(rf_nrmse) else "N/A")
                 else:
                     st.metric("RF NRMSE", "N/A")
@@ -1604,7 +1605,7 @@ def render_national_aggregation_dashboard():
             with col2:
                 xgb_rows = df_pub[df_pub['Model'] == 'XGBoost']
                 if len(xgb_rows) > 0:
-                    xgb_nrmse = xgb_rows['NRMSE (mean)'].iloc[0]
+                    xgb_nrmse = xgb_rows['NRMSE (mean)'].iloc[0] if 'NRMSE (mean)' in xgb_rows.columns else np.nan
                     st.metric("XGBoost NRMSE", f"{xgb_nrmse:.4f}" if pd.notna(xgb_nrmse) else "N/A")
                 else:
                     st.metric("XGBoost NRMSE", "N/A")

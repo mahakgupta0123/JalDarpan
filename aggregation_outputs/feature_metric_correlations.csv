@@ -2,49 +2,49 @@ Feature,Model,Metric,WeightedPearsonR,N_valid
 train_rows,Persistence,NRMSE,0.07054382006635422,944
 train_rows,Persistence,MAE,0.0011545460639790649,950
 train_rows,Persistence,R2,-0.026227951055690025,950
-train_rows,Random Forest,NRMSE,0.02726153552664733,944
+train_rows,Random Forest,NRMSE,0.02726153552664736,944
 train_rows,Random Forest,MAE,-0.04422025606572659,950
 train_rows,Random Forest,R2,-0.03193811321562407,950
-train_rows,XGBoost,NRMSE,-0.009806902921841077,944
+train_rows,XGBoost,NRMSE,-0.009806902921841072,944
 train_rows,XGBoost,MAE,-0.0727104277081338,950
 train_rows,XGBoost,R2,-0.006165500790510483,950
-test_rows,Persistence,NRMSE,0.07190098222336537,944
+test_rows,Persistence,NRMSE,0.07190098222336536,944
 test_rows,Persistence,MAE,0.0015198211668707162,950
 test_rows,Persistence,R2,-0.027358168450162097,950
-test_rows,Random Forest,NRMSE,0.02812639718443416,944
+test_rows,Random Forest,NRMSE,0.028126397184434177,944
 test_rows,Random Forest,MAE,-0.04272887225947943,950
 test_rows,Random Forest,R2,-0.03221856459849216,950
-test_rows,XGBoost,NRMSE,-0.00942142780382574,944
+test_rows,XGBoost,NRMSE,-0.009421427803825728,944
 test_rows,XGBoost,MAE,-0.07183475372992042,950
 test_rows,XGBoost,R2,-0.005955637155416665,950
-split_ratio,Persistence,NRMSE,-5.746253908961822e-17,944
+split_ratio,Persistence,NRMSE,2.873126954480911e-17,944
 split_ratio,Persistence,MAE,1.1672419961690797e-18,950
 split_ratio,Persistence,R2,-1.5508939980234595e-16,950
-split_ratio,Random Forest,NRMSE,8.781517718735456e-17,944
+split_ratio,Random Forest,NRMSE,-6.535082953477547e-17,944
 split_ratio,Random Forest,MAE,7.456800857231975e-17,950
 split_ratio,Random Forest,R2,2.3157191103083522e-17,950
-split_ratio,XGBoost,NRMSE,7.391032308276961e-17,944
+split_ratio,XGBoost,NRMSE,1.517106631698955e-16,944
 split_ratio,XGBoost,MAE,3.8461052114375936e-17,950
 split_ratio,XGBoost,R2,-2.248999677619903e-17,950
-gwl_min,Persistence,NRMSE,-0.006101346140385881,944
+gwl_min,Persistence,NRMSE,-0.0061013461403859005,944
 gwl_min,Persistence,MAE,-0.9411521859895337,950
 gwl_min,Persistence,R2,-0.027567003440360935,950
-gwl_min,Random Forest,NRMSE,0.06327775992810375,944
+gwl_min,Random Forest,NRMSE,0.06327775992810372,944
 gwl_min,Random Forest,MAE,-0.11601052135656023,950
 gwl_min,Random Forest,R2,-0.03019118178193136,950
 gwl_min,XGBoost,NRMSE,0.06643792520722076,944
 gwl_min,XGBoost,MAE,-0.17518182276913602,950
 gwl_min,XGBoost,R2,-0.04134556798424748,950
-gwl_max,Persistence,NRMSE,-0.018917958948674974,944
+gwl_max,Persistence,NRMSE,-0.018917958948675,944
 gwl_max,Persistence,MAE,0.013342902138301877,950
 gwl_max,Persistence,R2,0.05658682822876046,950
-gwl_max,Random Forest,NRMSE,-0.0013965080017181426,944
+gwl_max,Random Forest,NRMSE,-0.0013965080017181567,944
 gwl_max,Random Forest,MAE,0.11594546844258863,950
 gwl_max,Random Forest,R2,0.011258711278713422,950
-gwl_max,XGBoost,NRMSE,0.027272192967634282,944
+gwl_max,XGBoost,NRMSE,0.02727219296763427,944
 gwl_max,XGBoost,MAE,0.14331066711959714,950
 gwl_max,XGBoost,R2,-0.035388963343893375,950
-gwl_range,Persistence,NRMSE,-0.00011658365098462666,944
+gwl_range,Persistence,NRMSE,-0.00011658365098461297,944
 gwl_range,Persistence,MAE,0.9894400389961119,950
 gwl_range,Persistence,R2,0.04831165273306728,950
 gwl_range,Random Forest,NRMSE,-0.06667761456331354,944
@@ -53,52 +53,52 @@ gwl_range,Random Forest,R2,0.035465737566668536,950
 gwl_range,XGBoost,NRMSE,-0.060134141647710686,944
 gwl_range,XGBoost,MAE,0.23261151078617093,950
 gwl_range,XGBoost,R2,0.031092191544099826,950
-IF__anomaly_count,Persistence,NRMSE,0.14883523476173358,944
+IF__anomaly_count,Persistence,NRMSE,0.1488352347617336,944
 IF__anomaly_count,Persistence,MAE,-0.025507348525295622,950
 IF__anomaly_count,Persistence,R2,-0.09364349804714316,950
-IF__anomaly_count,Random Forest,NRMSE,0.34099939471173485,944
+IF__anomaly_count,Random Forest,NRMSE,0.34099939471173496,944
 IF__anomaly_count,Random Forest,MAE,0.17760075240476808,950
 IF__anomaly_count,Random Forest,R2,-0.21682345228681796,950
-IF__anomaly_count,XGBoost,NRMSE,0.24981853960397507,944
+IF__anomaly_count,XGBoost,NRMSE,0.24981853960397515,944
 IF__anomaly_count,XGBoost,MAE,0.12207564463313424,950
 IF__anomaly_count,XGBoost,R2,-0.12523127960409125,950
 IF__total_count,Persistence,NRMSE,0.07082115847528278,944
 IF__total_count,Persistence,MAE,0.0012285775062169382,950
 IF__total_count,Persistence,R2,-0.026457794846660727,950
-IF__total_count,Random Forest,NRMSE,0.027437662841882992,944
+IF__total_count,Random Forest,NRMSE,0.02743766284188301,944
 IF__total_count,Random Forest,MAE,-0.043919675484131886,950
 IF__total_count,Random Forest,R2,-0.03199602101946429,950
-IF__total_count,XGBoost,NRMSE,-0.009729157044201617,944
+IF__total_count,XGBoost,NRMSE,-0.00972915704420161,944
 IF__total_count,XGBoost,MAE,-0.07253554778899,950
 IF__total_count,XGBoost,R2,-0.00612320191371058,950
-IF__anomaly_density,Persistence,NRMSE,0.14820494145352453,944
+IF__anomaly_density,Persistence,NRMSE,0.14820494145352456,944
 IF__anomaly_density,Persistence,MAE,-0.02485717336942917,950
 IF__anomaly_density,Persistence,R2,-0.09799767349790064,950
-IF__anomaly_density,Random Forest,NRMSE,0.3485084390879298,944
+IF__anomaly_density,Random Forest,NRMSE,0.34850843908792983,944
 IF__anomaly_density,Random Forest,MAE,0.19118690165366167,950
 IF__anomaly_density,Random Forest,R2,-0.21896815000157913,950
-IF__anomaly_density,XGBoost,NRMSE,0.2603391932781162,944
+IF__anomaly_density,XGBoost,NRMSE,0.2603391932781163,944
 IF__anomaly_density,XGBoost,MAE,0.13726812736314434,950
 IF__anomaly_density,XGBoost,R2,-0.12924252532942931,950
-IF__mean_score,Persistence,NRMSE,-0.07158550072017057,944
+IF__mean_score,Persistence,NRMSE,-0.07158550072017059,944
 IF__mean_score,Persistence,MAE,-0.027125580072238885,950
 IF__mean_score,Persistence,R2,0.10769757189968346,950
-IF__mean_score,Random Forest,NRMSE,-0.04342479305956053,944
+IF__mean_score,Random Forest,NRMSE,-0.043424793059560554,944
 IF__mean_score,Random Forest,MAE,0.05222851191623007,950
 IF__mean_score,Random Forest,R2,0.05591258083984769,950
-IF__mean_score,XGBoost,NRMSE,0.09519878666750217,944
+IF__mean_score,XGBoost,NRMSE,0.09519878666750214,944
 IF__mean_score,XGBoost,MAE,0.1100786234467989,950
 IF__mean_score,XGBoost,R2,-0.08583477727626547,950
-IF__min_score,Persistence,NRMSE,0.042792003141833956,944
+IF__min_score,Persistence,NRMSE,0.042792003141833915,944
 IF__min_score,Persistence,MAE,0.013554709755422775,950
 IF__min_score,Persistence,R2,0.020148174507770823,950
-IF__min_score,Random Forest,NRMSE,-0.18738884746331474,944
+IF__min_score,Random Forest,NRMSE,-0.18738884746331477,944
 IF__min_score,Random Forest,MAE,-0.19024264090313975,950
 IF__min_score,Random Forest,R2,0.1829237680971198,950
 IF__min_score,XGBoost,NRMSE,-0.11628976988818016,944
 IF__min_score,XGBoost,MAE,-0.14883275952989813,950
 IF__min_score,XGBoost,R2,0.10477614852266758,950
-Persistence__Bias,Persistence,NRMSE,0.004628817880754909,944
+Persistence__Bias,Persistence,NRMSE,0.004628817880754903,944
 Persistence__Bias,Persistence,MAE,-0.9511571689877713,950
 Persistence__Bias,Persistence,R2,-0.053541557224730925,950
 Persistence__Bias,Random Forest,NRMSE,0.029088668611602333,944
@@ -110,7 +110,7 @@ Persistence__Bias,XGBoost,R2,-0.01141929140560903,950
 Persistence__Regime Accuracy,Persistence,NRMSE,-0.1512138199989739,944
 Persistence__Regime Accuracy,Persistence,MAE,-0.056649682376067934,950
 Persistence__Regime Accuracy,Persistence,R2,0.14471384067174423,950
-Persistence__Regime Accuracy,Random Forest,NRMSE,0.3288032289005346,944
+Persistence__Regime Accuracy,Random Forest,NRMSE,0.3288032289005345,944
 Persistence__Regime Accuracy,Random Forest,MAE,-0.07743953319826476,950
 Persistence__Regime Accuracy,Random Forest,R2,-0.2256693869816102,950
 Persistence__Regime Accuracy,XGBoost,NRMSE,0.30077457878260555,944
@@ -122,19 +122,19 @@ Persistence__Regime Acc Low,Persistence,R2,-0.03801267271184273,724
 Persistence__Regime Acc Low,Random Forest,NRMSE,0.3884105086420499,724
 Persistence__Regime Acc Low,Random Forest,MAE,0.08949987374724293,724
 Persistence__Regime Acc Low,Random Forest,R2,-0.248819315878918,724
-Persistence__Regime Acc Low,XGBoost,NRMSE,0.3741762670387498,724
+Persistence__Regime Acc Low,XGBoost,NRMSE,0.37417626703874973,724
 Persistence__Regime Acc Low,XGBoost,MAE,0.08812034539667082,724
 Persistence__Regime Acc Low,XGBoost,R2,-0.26075257194633056,724
-Persistence__Regime Acc Moderate,Persistence,NRMSE,0.1856585531709528,462
+Persistence__Regime Acc Moderate,Persistence,NRMSE,0.18565855317095278,462
 Persistence__Regime Acc Moderate,Persistence,MAE,-0.0814627165441079,464
 Persistence__Regime Acc Moderate,Persistence,R2,-0.14796379443144006,464
-Persistence__Regime Acc Moderate,Random Forest,NRMSE,0.044699585222844,462
+Persistence__Regime Acc Moderate,Random Forest,NRMSE,0.04469958522284394,462
 Persistence__Regime Acc Moderate,Random Forest,MAE,-0.03492235559167065,464
 Persistence__Regime Acc Moderate,Random Forest,R2,-0.07396144783777743,464
-Persistence__Regime Acc Moderate,XGBoost,NRMSE,-0.04104895864244393,462
+Persistence__Regime Acc Moderate,XGBoost,NRMSE,-0.0410489586424439,462
 Persistence__Regime Acc Moderate,XGBoost,MAE,-0.06939753622258564,464
 Persistence__Regime Acc Moderate,XGBoost,R2,0.05298084034284912,464
-Persistence__Regime Acc High,Persistence,NRMSE,0.1097274707010104,420
+Persistence__Regime Acc High,Persistence,NRMSE,0.10972747070101034,420
 Persistence__Regime Acc High,Persistence,MAE,-0.10306428541889082,424
 Persistence__Regime Acc High,Persistence,R2,-0.012589937748921176,424
 Persistence__Regime Acc High,Random Forest,NRMSE,0.17744723526816739,420
@@ -143,7 +143,7 @@ Persistence__Regime Acc High,Random Forest,R2,-0.13321349262381119,424
 Persistence__Regime Acc High,XGBoost,NRMSE,0.17287412231173413,420
 Persistence__Regime Acc High,XGBoost,MAE,-0.13125358651654226,424
 Persistence__Regime Acc High,XGBoost,R2,-0.09094039196053065,424
-Random Forest__Bias,Persistence,NRMSE,-0.03790884213513442,944
+Random Forest__Bias,Persistence,NRMSE,-0.037908842135134416,944
 Random Forest__Bias,Persistence,MAE,-0.10920529552264545,950
 Random Forest__Bias,Persistence,R2,-0.03599783193775673,950
 Random Forest__Bias,Random Forest,NRMSE,-0.018228005089066242,944
@@ -152,19 +152,19 @@ Random Forest__Bias,Random Forest,R2,-0.0426007438726455,950
 Random Forest__Bias,XGBoost,NRMSE,-0.03584346908668941,944
 Random Forest__Bias,XGBoost,MAE,-0.5687077353131521,950
 Random Forest__Bias,XGBoost,R2,-0.023995439682254385,950
-Random Forest__Regime Accuracy,Persistence,NRMSE,0.08364133252864737,944
+Random Forest__Regime Accuracy,Persistence,NRMSE,0.0836413325286474,944
 Random Forest__Regime Accuracy,Persistence,MAE,0.013218405005099295,950
 Random Forest__Regime Accuracy,Persistence,R2,0.003632030903194462,950
-Random Forest__Regime Accuracy,Random Forest,NRMSE,0.1270055874449758,944
+Random Forest__Regime Accuracy,Random Forest,NRMSE,0.12700558744497584,944
 Random Forest__Regime Accuracy,Random Forest,MAE,0.040378455149902855,950
 Random Forest__Regime Accuracy,Random Forest,R2,-0.08152770339861777,950
-Random Forest__Regime Accuracy,XGBoost,NRMSE,0.14428459317017756,944
+Random Forest__Regime Accuracy,XGBoost,NRMSE,0.14428459317017758,944
 Random Forest__Regime Accuracy,XGBoost,MAE,0.03242544668168042,950
 Random Forest__Regime Accuracy,XGBoost,R2,-0.10532393320314791,950
 Random Forest__Regime Acc Low,Persistence,NRMSE,0.15080664790780296,724
 Random Forest__Regime Acc Low,Persistence,MAE,0.020616359805022775,724
 Random Forest__Regime Acc Low,Persistence,R2,-0.06610842693626143,724
-Random Forest__Regime Acc Low,Random Forest,NRMSE,0.17219358039090366,724
+Random Forest__Regime Acc Low,Random Forest,NRMSE,0.17219358039090363,724
 Random Forest__Regime Acc Low,Random Forest,MAE,-0.005158135794719953,724
 Random Forest__Regime Acc Low,Random Forest,R2,-0.11590340984651873,724
 Random Forest__Regime Acc Low,XGBoost,NRMSE,0.1722853790338417,724
@@ -173,37 +173,37 @@ Random Forest__Regime Acc Low,XGBoost,R2,-0.12215787434469909,724
 Random Forest__Regime Acc Moderate,Persistence,NRMSE,0.16069180058361687,462
 Random Forest__Regime Acc Moderate,Persistence,MAE,-0.06323473647457475,464
 Random Forest__Regime Acc Moderate,Persistence,R2,-0.15268617362020379,464
-Random Forest__Regime Acc Moderate,Random Forest,NRMSE,-0.1702518536759499,462
+Random Forest__Regime Acc Moderate,Random Forest,NRMSE,-0.17025185367594983,462
 Random Forest__Regime Acc Moderate,Random Forest,MAE,-0.2575733140307671,464
 Random Forest__Regime Acc Moderate,Random Forest,R2,0.09522527589223048,464
 Random Forest__Regime Acc Moderate,XGBoost,NRMSE,-0.17061945098023226,462
 Random Forest__Regime Acc Moderate,XGBoost,MAE,-0.26549532064537035,464
 Random Forest__Regime Acc Moderate,XGBoost,R2,0.0780658960835961,464
-Random Forest__Regime Acc High,Persistence,NRMSE,0.2501154634234627,420
+Random Forest__Regime Acc High,Persistence,NRMSE,0.25011546342346264,420
 Random Forest__Regime Acc High,Persistence,MAE,0.028941127666876083,424
 Random Forest__Regime Acc High,Persistence,R2,-0.0327648704122685,424
-Random Forest__Regime Acc High,Random Forest,NRMSE,0.09567002367341107,420
+Random Forest__Regime Acc High,Random Forest,NRMSE,0.09567002367341104,420
 Random Forest__Regime Acc High,Random Forest,MAE,0.08124102051840812,424
 Random Forest__Regime Acc High,Random Forest,R2,-0.008847594103839979,424
-Random Forest__Regime Acc High,XGBoost,NRMSE,0.14272606475235208,420
+Random Forest__Regime Acc High,XGBoost,NRMSE,0.14272606475235206,420
 Random Forest__Regime Acc High,XGBoost,MAE,0.05306453432176064,424
 Random Forest__Regime Acc High,XGBoost,R2,0.00953483009527371,424
-XGBoost__Bias,Persistence,NRMSE,-0.011953044723024909,944
+XGBoost__Bias,Persistence,NRMSE,-0.011953044723024907,944
 XGBoost__Bias,Persistence,MAE,-0.16341363183662566,950
 XGBoost__Bias,Persistence,R2,-0.05302590999060651,950
-XGBoost__Bias,Random Forest,NRMSE,-0.005515092518185994,944
+XGBoost__Bias,Random Forest,NRMSE,-0.005515092518185999,944
 XGBoost__Bias,Random Forest,MAE,-0.5884515823438802,950
 XGBoost__Bias,Random Forest,R2,-0.04387778976975735,950
-XGBoost__Bias,XGBoost,NRMSE,-0.0599148377952061,944
+XGBoost__Bias,XGBoost,NRMSE,-0.05991483779520611,944
 XGBoost__Bias,XGBoost,MAE,-0.6518212736212122,950
 XGBoost__Bias,XGBoost,R2,0.030572878127356942,950
-XGBoost__Regime Accuracy,Persistence,NRMSE,0.06186310992918038,944
+XGBoost__Regime Accuracy,Persistence,NRMSE,0.06186310992918041,944
 XGBoost__Regime Accuracy,Persistence,MAE,-0.1341397292289285,950
 XGBoost__Regime Accuracy,Persistence,R2,-0.04969515064525696,950
-XGBoost__Regime Accuracy,Random Forest,NRMSE,0.1068803784757222,944
+XGBoost__Regime Accuracy,Random Forest,NRMSE,0.10688037847572221,944
 XGBoost__Regime Accuracy,Random Forest,MAE,0.004480309850584689,950
 XGBoost__Regime Accuracy,Random Forest,R2,-0.08394892032746398,950
-XGBoost__Regime Accuracy,XGBoost,NRMSE,0.039214464652422475,944
+XGBoost__Regime Accuracy,XGBoost,NRMSE,0.03921446465242249,944
 XGBoost__Regime Accuracy,XGBoost,MAE,-0.03127758677682086,950
 XGBoost__Regime Accuracy,XGBoost,R2,-0.052336681826694355,950
 XGBoost__Regime Acc Low,Persistence,NRMSE,0.17751824483342188,724
@@ -215,37 +215,37 @@ XGBoost__Regime Acc Low,Random Forest,R2,-0.10821676894847775,724
 XGBoost__Regime Acc Low,XGBoost,NRMSE,0.11424261650060524,724
 XGBoost__Regime Acc Low,XGBoost,MAE,-0.004753843579651144,724
 XGBoost__Regime Acc Low,XGBoost,R2,-0.08829044895573791,724
-XGBoost__Regime Acc Moderate,Persistence,NRMSE,0.14879958336733634,462
+XGBoost__Regime Acc Moderate,Persistence,NRMSE,0.14879958336733629,462
 XGBoost__Regime Acc Moderate,Persistence,MAE,-0.12313070694873286,464
 XGBoost__Regime Acc Moderate,Persistence,R2,-0.12334623967051474,464
-XGBoost__Regime Acc Moderate,Random Forest,NRMSE,-0.16723920396063807,462
+XGBoost__Regime Acc Moderate,Random Forest,NRMSE,-0.16723920396063813,462
 XGBoost__Regime Acc Moderate,Random Forest,MAE,-0.2613952071219408,464
 XGBoost__Regime Acc Moderate,Random Forest,R2,0.09546671073855527,464
-XGBoost__Regime Acc Moderate,XGBoost,NRMSE,-0.1449077882454507,462
+XGBoost__Regime Acc Moderate,XGBoost,NRMSE,-0.14490778824545072,462
 XGBoost__Regime Acc Moderate,XGBoost,MAE,-0.26303039716912774,464
 XGBoost__Regime Acc Moderate,XGBoost,R2,0.07351136191059301,464
-XGBoost__Regime Acc High,Persistence,NRMSE,0.1869608942494815,420
+XGBoost__Regime Acc High,Persistence,NRMSE,0.18696089424948148,420
 XGBoost__Regime Acc High,Persistence,MAE,-0.08812460989347404,424
 XGBoost__Regime Acc High,Persistence,R2,0.06307067845567345,424
-XGBoost__Regime Acc High,Random Forest,NRMSE,0.14885807604424955,420
+XGBoost__Regime Acc High,Random Forest,NRMSE,0.1488580760442495,420
 XGBoost__Regime Acc High,Random Forest,MAE,0.062338820199001506,424
 XGBoost__Regime Acc High,Random Forest,R2,-0.07560475720398135,424
 XGBoost__Regime Acc High,XGBoost,NRMSE,0.12461923496783335,420
 XGBoost__Regime Acc High,XGBoost,MAE,0.006545870353043463,424
 XGBoost__Regime Acc High,XGBoost,R2,0.0008355602143319336,424
-Persistence_cm__Actual Low__Pred Low,Persistence,NRMSE,0.05773601156898526,944
+Persistence_cm__Actual Low__Pred Low,Persistence,NRMSE,0.05773601156898525,944
 Persistence_cm__Actual Low__Pred Low,Persistence,MAE,0.006195720113960557,950
 Persistence_cm__Actual Low__Pred Low,Persistence,R2,-0.08300848384242743,950
-Persistence_cm__Actual Low__Pred Low,Random Forest,NRMSE,0.31280661449841657,944
+Persistence_cm__Actual Low__Pred Low,Random Forest,NRMSE,0.3128066144984167,944
 Persistence_cm__Actual Low__Pred Low,Random Forest,MAE,-0.02478590176015424,950
 Persistence_cm__Actual Low__Pred Low,Random Forest,R2,-0.24849504278723988,950
 Persistence_cm__Actual Low__Pred Low,XGBoost,NRMSE,0.2822084275226755,944
 Persistence_cm__Actual Low__Pred Low,XGBoost,MAE,-0.02021069014159582,950
 Persistence_cm__Actual Low__Pred Low,XGBoost,R2,-0.2286165400163853,950
-Persistence_cm__Actual Low__Pred Moderate,Persistence,NRMSE,0.1639799245046484,944
+Persistence_cm__Actual Low__Pred Moderate,Persistence,NRMSE,0.16397992450464838,944
 Persistence_cm__Actual Low__Pred Moderate,Persistence,MAE,-0.014729887722496242,950
 Persistence_cm__Actual Low__Pred Moderate,Persistence,R2,-0.16696760138482175,950
-Persistence_cm__Actual Low__Pred Moderate,Random Forest,NRMSE,-0.16045850596461184,944
+Persistence_cm__Actual Low__Pred Moderate,Random Forest,NRMSE,-0.1604585059646119,944
 Persistence_cm__Actual Low__Pred Moderate,Random Forest,MAE,-0.036583935503741644,950
 Persistence_cm__Actual Low__Pred Moderate,Random Forest,R2,0.11753942125928638,950
 Persistence_cm__Actual Low__Pred Moderate,XGBoost,NRMSE,-0.16893929315122683,944
@@ -254,34 +254,34 @@ Persistence_cm__Actual Low__Pred Moderate,XGBoost,R2,0.12391189492035554,950
 Persistence_cm__Actual Low__Pred High,Persistence,NRMSE,0.07156082370205485,944
 Persistence_cm__Actual Low__Pred High,Persistence,MAE,0.033312486387005215,950
 Persistence_cm__Actual Low__Pred High,Persistence,R2,-0.06063340185199154,950
-Persistence_cm__Actual Low__Pred High,Random Forest,NRMSE,-0.17407763122136288,944
+Persistence_cm__Actual Low__Pred High,Random Forest,NRMSE,-0.17407763122136286,944
 Persistence_cm__Actual Low__Pred High,Random Forest,MAE,-0.01407461150985891,950
 Persistence_cm__Actual Low__Pred High,Random Forest,R2,0.10285303254257604,950
 Persistence_cm__Actual Low__Pred High,XGBoost,NRMSE,-0.1368775319682738,944
 Persistence_cm__Actual Low__Pred High,XGBoost,MAE,-0.017048397708033132,950
 Persistence_cm__Actual Low__Pred High,XGBoost,R2,0.09514952963561445,950
-Persistence_cm__Actual Moderate__Pred Low,Persistence,NRMSE,-0.12517425465684318,944
+Persistence_cm__Actual Moderate__Pred Low,Persistence,NRMSE,-0.12517425465684315,944
 Persistence_cm__Actual Moderate__Pred Low,Persistence,MAE,-0.023058894327899555,950
 Persistence_cm__Actual Moderate__Pred Low,Persistence,R2,0.05800860128953554,950
-Persistence_cm__Actual Moderate__Pred Low,Random Forest,NRMSE,-0.10748808848125065,944
+Persistence_cm__Actual Moderate__Pred Low,Random Forest,NRMSE,-0.10748808848125066,944
 Persistence_cm__Actual Moderate__Pred Low,Random Forest,MAE,-0.06926478735018286,950
 Persistence_cm__Actual Moderate__Pred Low,Random Forest,R2,0.07032290223274515,950
-Persistence_cm__Actual Moderate__Pred Low,XGBoost,NRMSE,-0.07314310915439555,944
+Persistence_cm__Actual Moderate__Pred Low,XGBoost,NRMSE,-0.07314310915439562,944
 Persistence_cm__Actual Moderate__Pred Low,XGBoost,MAE,-0.059963665065926236,950
 Persistence_cm__Actual Moderate__Pred Low,XGBoost,R2,0.039585773410054176,950
-Persistence_cm__Actual Moderate__Pred Moderate,Persistence,NRMSE,-0.0694091904209014,944
+Persistence_cm__Actual Moderate__Pred Moderate,Persistence,NRMSE,-0.06940919042090143,944
 Persistence_cm__Actual Moderate__Pred Moderate,Persistence,MAE,-0.0414198100277904,950
 Persistence_cm__Actual Moderate__Pred Moderate,Persistence,R2,0.058165798468587444,950
-Persistence_cm__Actual Moderate__Pred Moderate,Random Forest,NRMSE,-0.2020523059154104,944
+Persistence_cm__Actual Moderate__Pred Moderate,Random Forest,NRMSE,-0.20205230591541049,944
 Persistence_cm__Actual Moderate__Pred Moderate,Random Forest,MAE,-0.13859430301949574,950
 Persistence_cm__Actual Moderate__Pred Moderate,Random Forest,R2,0.11255847643315524,950
 Persistence_cm__Actual Moderate__Pred Moderate,XGBoost,NRMSE,-0.22568980060274804,944
 Persistence_cm__Actual Moderate__Pred Moderate,XGBoost,MAE,-0.13828556916511306,950
 Persistence_cm__Actual Moderate__Pred Moderate,XGBoost,R2,0.1377323705195119,950
-Persistence_cm__Actual Moderate__Pred High,Persistence,NRMSE,0.010821100048228513,944
+Persistence_cm__Actual Moderate__Pred High,Persistence,NRMSE,0.010821100048228515,944
 Persistence_cm__Actual Moderate__Pred High,Persistence,MAE,-0.010352073242629782,950
 Persistence_cm__Actual Moderate__Pred High,Persistence,R2,-0.011537370156998588,950
-Persistence_cm__Actual Moderate__Pred High,Random Forest,NRMSE,-0.1660976994340924,944
+Persistence_cm__Actual Moderate__Pred High,Random Forest,NRMSE,-0.16609769943409242,944
 Persistence_cm__Actual Moderate__Pred High,Random Forest,MAE,-0.07556916803238437,950
 Persistence_cm__Actual Moderate__Pred High,Random Forest,R2,0.09786828823806829,950
 Persistence_cm__Actual Moderate__Pred High,XGBoost,NRMSE,-0.16725243318162927,944
@@ -290,64 +290,64 @@ Persistence_cm__Actual Moderate__Pred High,XGBoost,R2,0.09958260052670555,950
 Persistence_cm__Actual High__Pred Low,Persistence,NRMSE,0.10117868010795977,944
 Persistence_cm__Actual High__Pred Low,Persistence,MAE,0.16853252630062018,950
 Persistence_cm__Actual High__Pred Low,Persistence,R2,-0.024228599809212558,950
-Persistence_cm__Actual High__Pred Low,Random Forest,NRMSE,-0.009924379996933847,944
+Persistence_cm__Actual High__Pred Low,Random Forest,NRMSE,-0.009924379996933838,944
 Persistence_cm__Actual High__Pred Low,Random Forest,MAE,0.3969115815880022,950
 Persistence_cm__Actual High__Pred Low,Random Forest,R2,0.02832196604041027,950
-Persistence_cm__Actual High__Pred Low,XGBoost,NRMSE,-0.0011778658204722326,944
+Persistence_cm__Actual High__Pred Low,XGBoost,NRMSE,-0.0011778658204722227,944
 Persistence_cm__Actual High__Pred Low,XGBoost,MAE,0.3872478575935863,950
 Persistence_cm__Actual High__Pred Low,XGBoost,R2,0.03133374586029782,950
-Persistence_cm__Actual High__Pred Moderate,Persistence,NRMSE,-0.041853225151330435,944
+Persistence_cm__Actual High__Pred Moderate,Persistence,NRMSE,-0.041853225151330414,944
 Persistence_cm__Actual High__Pred Moderate,Persistence,MAE,-0.006473820754041644,950
 Persistence_cm__Actual High__Pred Moderate,Persistence,R2,0.018745229847146282,950
-Persistence_cm__Actual High__Pred Moderate,Random Forest,NRMSE,-0.10544763740009813,944
+Persistence_cm__Actual High__Pred Moderate,Random Forest,NRMSE,-0.10544763740009809,944
 Persistence_cm__Actual High__Pred Moderate,Random Forest,MAE,-0.011337221612937983,950
 Persistence_cm__Actual High__Pred Moderate,Random Forest,R2,0.06995356028061919,950
-Persistence_cm__Actual High__Pred Moderate,XGBoost,NRMSE,-0.09530046092832208,944
+Persistence_cm__Actual High__Pred Moderate,XGBoost,NRMSE,-0.09530046092832212,944
 Persistence_cm__Actual High__Pred Moderate,XGBoost,MAE,-0.010195004878567821,950
 Persistence_cm__Actual High__Pred Moderate,XGBoost,R2,0.07131204890085507,950
 Persistence_cm__Actual High__Pred High,Persistence,NRMSE,-0.14835727359933487,944
 Persistence_cm__Actual High__Pred High,Persistence,MAE,-0.026664754455858933,950
 Persistence_cm__Actual High__Pred High,Persistence,R2,0.19429084410928874,950
-Persistence_cm__Actual High__Pred High,Random Forest,NRMSE,0.05258648056166929,944
+Persistence_cm__Actual High__Pred High,Random Forest,NRMSE,0.05258648056166926,944
 Persistence_cm__Actual High__Pred High,Random Forest,MAE,0.07136930722377441,950
 Persistence_cm__Actual High__Pred High,Random Forest,R2,0.02874209416510045,950
-Persistence_cm__Actual High__Pred High,XGBoost,NRMSE,0.08199444343692469,944
+Persistence_cm__Actual High__Pred High,XGBoost,NRMSE,0.08199444343692468,944
 Persistence_cm__Actual High__Pred High,XGBoost,MAE,0.060865858575535656,950
 Persistence_cm__Actual High__Pred High,XGBoost,R2,-0.00894311255071222,950
-Random Forest_cm__Actual Low__Pred Low,Persistence,NRMSE,0.17491719706823544,944
+Random Forest_cm__Actual Low__Pred Low,Persistence,NRMSE,0.1749171970682354,944
 Random Forest_cm__Actual Low__Pred Low,Persistence,MAE,0.00892832628242989,950
 Random Forest_cm__Actual Low__Pred Low,Persistence,R2,-0.19505988339654978,950
 Random Forest_cm__Actual Low__Pred Low,Random Forest,NRMSE,0.2155229445424362,944
 Random Forest_cm__Actual Low__Pred Low,Random Forest,MAE,-0.05194318370576633,950
 Random Forest_cm__Actual Low__Pred Low,Random Forest,R2,-0.18747308365605378,950
-Random Forest_cm__Actual Low__Pred Low,XGBoost,NRMSE,0.18696407737921164,944
+Random Forest_cm__Actual Low__Pred Low,XGBoost,NRMSE,0.1869640773792117,944
 Random Forest_cm__Actual Low__Pred Low,XGBoost,MAE,-0.05239458325769474,950
 Random Forest_cm__Actual Low__Pred Low,XGBoost,R2,-0.163558635351792,950
 Random Forest_cm__Actual Low__Pred Moderate,Persistence,NRMSE,0.07361620867427744,944
 Random Forest_cm__Actual Low__Pred Moderate,Persistence,MAE,-0.00674391776574074,950
 Random Forest_cm__Actual Low__Pred Moderate,Persistence,R2,-0.11779271810815972,950
-Random Forest_cm__Actual Low__Pred Moderate,Random Forest,NRMSE,-0.13526337080119855,944
+Random Forest_cm__Actual Low__Pred Moderate,Random Forest,NRMSE,-0.13526337080119857,944
 Random Forest_cm__Actual Low__Pred Moderate,Random Forest,MAE,-0.05191982323897491,950
 Random Forest_cm__Actual Low__Pred Moderate,Random Forest,R2,0.09983702540463774,950
 Random Forest_cm__Actual Low__Pred Moderate,XGBoost,NRMSE,-0.12793711384761627,944
 Random Forest_cm__Actual Low__Pred Moderate,XGBoost,MAE,-0.04926392061959817,950
 Random Forest_cm__Actual Low__Pred Moderate,XGBoost,R2,0.09559987506067147,950
-Random Forest_cm__Actual Low__Pred High,Persistence,NRMSE,-0.07198125660859649,944
+Random Forest_cm__Actual Low__Pred High,Persistence,NRMSE,-0.07198125660859644,944
 Random Forest_cm__Actual Low__Pred High,Persistence,MAE,0.02509297845418983,950
 Random Forest_cm__Actual Low__Pred High,Persistence,R2,0.0815144559833419,950
-Random Forest_cm__Actual Low__Pred High,Random Forest,NRMSE,-0.010486776325578751,944
+Random Forest_cm__Actual Low__Pred High,Random Forest,NRMSE,-0.01048677632557873,944
 Random Forest_cm__Actual Low__Pred High,Random Forest,MAE,0.2114487352753685,950
 Random Forest_cm__Actual Low__Pred High,Random Forest,R2,0.03012577395249552,950
-Random Forest_cm__Actual Low__Pred High,XGBoost,NRMSE,0.007534487795743863,944
+Random Forest_cm__Actual Low__Pred High,XGBoost,NRMSE,0.007534487795743896,944
 Random Forest_cm__Actual Low__Pred High,XGBoost,MAE,0.21444581174404667,950
 Random Forest_cm__Actual Low__Pred High,XGBoost,R2,0.02615393519864703,950
-Random Forest_cm__Actual Moderate__Pred Low,Persistence,NRMSE,-0.03802692775778577,944
+Random Forest_cm__Actual Moderate__Pred Low,Persistence,NRMSE,-0.03802692775778588,944
 Random Forest_cm__Actual Moderate__Pred Low,Persistence,MAE,-0.013287530456726893,950
 Random Forest_cm__Actual Moderate__Pred Low,Persistence,R2,-0.020008756040734137,950
-Random Forest_cm__Actual Moderate__Pred Low,Random Forest,NRMSE,0.022331084204507717,944
+Random Forest_cm__Actual Moderate__Pred Low,Random Forest,NRMSE,0.02233108420450765,944
 Random Forest_cm__Actual Moderate__Pred Low,Random Forest,MAE,-0.04128834193996853,950
 Random Forest_cm__Actual Moderate__Pred Low,Random Forest,R2,-0.04276664624106714,950
-Random Forest_cm__Actual Moderate__Pred Low,XGBoost,NRMSE,0.0065288877902053635,944
+Random Forest_cm__Actual Moderate__Pred Low,XGBoost,NRMSE,0.006528887790205277,944
 Random Forest_cm__Actual Moderate__Pred Low,XGBoost,MAE,-0.027029914921981514,950
 Random Forest_cm__Actual Moderate__Pred Low,XGBoost,R2,-0.01755993923117557,950
 Random Forest_cm__Actual Moderate__Pred Moderate,Persistence,NRMSE,-0.09468962927779338,944
@@ -359,7 +359,7 @@ Random Forest_cm__Actual Moderate__Pred Moderate,Random Forest,R2,0.173520074669
 Random Forest_cm__Actual Moderate__Pred Moderate,XGBoost,NRMSE,-0.308822274521304,944
 Random Forest_cm__Actual Moderate__Pred Moderate,XGBoost,MAE,-0.1744492211118166,950
 Random Forest_cm__Actual Moderate__Pred Moderate,XGBoost,R2,0.1863175742498223,950
-Random Forest_cm__Actual Moderate__Pred High,Persistence,NRMSE,-0.022763060758182557,944
+Random Forest_cm__Actual Moderate__Pred High,Persistence,NRMSE,-0.022763060758182532,944
 Random Forest_cm__Actual Moderate__Pred High,Persistence,MAE,-0.017865857316280688,950
 Random Forest_cm__Actual Moderate__Pred High,Persistence,R2,0.02372249812896855,950
 Random Forest_cm__Actual Moderate__Pred High,Random Forest,NRMSE,-0.1524875561872624,944
@@ -368,52 +368,52 @@ Random Forest_cm__Actual Moderate__Pred High,Random Forest,R2,0.0995838016342970
 Random Forest_cm__Actual Moderate__Pred High,XGBoost,NRMSE,-0.12716547867892486,944
 Random Forest_cm__Actual Moderate__Pred High,XGBoost,MAE,-0.04095419970181859,950
 Random Forest_cm__Actual Moderate__Pred High,XGBoost,R2,0.09329292500548766,950
-Random Forest_cm__Actual High__Pred Low,Persistence,NRMSE,-0.08466841099426102,944
+Random Forest_cm__Actual High__Pred Low,Persistence,NRMSE,-0.084668410994261,944
 Random Forest_cm__Actual High__Pred Low,Persistence,MAE,0.020574433483614672,950
 Random Forest_cm__Actual High__Pred Low,Persistence,R2,0.08186109563747278,950
-Random Forest_cm__Actual High__Pred Low,Random Forest,NRMSE,-0.03142775478583803,944
+Random Forest_cm__Actual High__Pred Low,Random Forest,NRMSE,-0.031427754785838015,944
 Random Forest_cm__Actual High__Pred Low,Random Forest,MAE,0.1460226444699279,950
 Random Forest_cm__Actual High__Pred Low,Random Forest,R2,0.03459849747956501,950
-Random Forest_cm__Actual High__Pred Low,XGBoost,NRMSE,-0.04012491541623973,944
+Random Forest_cm__Actual High__Pred Low,XGBoost,NRMSE,-0.04012491541623972,944
 Random Forest_cm__Actual High__Pred Low,XGBoost,MAE,0.10866497074665474,950
 Random Forest_cm__Actual High__Pred Low,XGBoost,R2,0.032222269761681986,950
 Random Forest_cm__Actual High__Pred Moderate,Persistence,NRMSE,-0.14422860457845502,944
 Random Forest_cm__Actual High__Pred Moderate,Persistence,MAE,-0.00822375469043053,950
 Random Forest_cm__Actual High__Pred Moderate,Persistence,R2,0.080657206869145,950
-Random Forest_cm__Actual High__Pred Moderate,Random Forest,NRMSE,-0.036390799642393105,944
+Random Forest_cm__Actual High__Pred Moderate,Random Forest,NRMSE,-0.0363907996423931,944
 Random Forest_cm__Actual High__Pred Moderate,Random Forest,MAE,-0.03948070687176314,950
 Random Forest_cm__Actual High__Pred Moderate,Random Forest,R2,0.023876687713265853,950
-Random Forest_cm__Actual High__Pred Moderate,XGBoost,NRMSE,-0.07770690742739048,944
+Random Forest_cm__Actual High__Pred Moderate,XGBoost,NRMSE,-0.07770690742739049,944
 Random Forest_cm__Actual High__Pred Moderate,XGBoost,MAE,-0.039755967350108785,950
 Random Forest_cm__Actual High__Pred Moderate,XGBoost,R2,0.05488800551035625,950
-Random Forest_cm__Actual High__Pred High,Persistence,NRMSE,-0.09679567110639473,944
+Random Forest_cm__Actual High__Pred High,Persistence,NRMSE,-0.09679567110639471,944
 Random Forest_cm__Actual High__Pred High,Persistence,MAE,0.033123271082159386,950
 Random Forest_cm__Actual High__Pred High,Persistence,R2,0.1734511220863056,950
-Random Forest_cm__Actual High__Pred High,Random Forest,NRMSE,0.019971560069863833,944
+Random Forest_cm__Actual High__Pred High,Random Forest,NRMSE,0.019971560069863826,944
 Random Forest_cm__Actual High__Pred High,Random Forest,MAE,0.21191347969233756,950
 Random Forest_cm__Actual High__Pred High,Random Forest,R2,0.05671549003058334,950
 Random Forest_cm__Actual High__Pred High,XGBoost,NRMSE,0.06259770459563474,944
 Random Forest_cm__Actual High__Pred High,XGBoost,MAE,0.19964168993334924,950
 Random Forest_cm__Actual High__Pred High,XGBoost,R2,0.016097573402803444,950
-Persistence__gwl_min,Persistence,NRMSE,-0.006101346140385881,944
+Persistence__gwl_min,Persistence,NRMSE,-0.0061013461403859005,944
 Persistence__gwl_min,Persistence,MAE,-0.9411521859895337,950
 Persistence__gwl_min,Persistence,R2,-0.027567003440360935,950
-Persistence__gwl_min,Random Forest,NRMSE,0.06327775992810375,944
+Persistence__gwl_min,Random Forest,NRMSE,0.06327775992810372,944
 Persistence__gwl_min,Random Forest,MAE,-0.11601052135656023,950
 Persistence__gwl_min,Random Forest,R2,-0.03019118178193136,950
 Persistence__gwl_min,XGBoost,NRMSE,0.06643792520722076,944
 Persistence__gwl_min,XGBoost,MAE,-0.17518182276913602,950
 Persistence__gwl_min,XGBoost,R2,-0.04134556798424748,950
-Persistence__gwl_max,Persistence,NRMSE,-0.018917958948674974,944
+Persistence__gwl_max,Persistence,NRMSE,-0.018917958948675,944
 Persistence__gwl_max,Persistence,MAE,0.013342902138301877,950
 Persistence__gwl_max,Persistence,R2,0.05658682822876046,950
-Persistence__gwl_max,Random Forest,NRMSE,-0.0013965080017181426,944
+Persistence__gwl_max,Random Forest,NRMSE,-0.0013965080017181567,944
 Persistence__gwl_max,Random Forest,MAE,0.11594546844258863,950
 Persistence__gwl_max,Random Forest,R2,0.011258711278713422,950
-Persistence__gwl_max,XGBoost,NRMSE,0.027272192967634282,944
+Persistence__gwl_max,XGBoost,NRMSE,0.02727219296763427,944
 Persistence__gwl_max,XGBoost,MAE,0.14331066711959714,950
 Persistence__gwl_max,XGBoost,R2,-0.035388963343893375,950
-Persistence__gwl_range,Persistence,NRMSE,-0.00011658365098462666,944
+Persistence__gwl_range,Persistence,NRMSE,-0.00011658365098461297,944
 Persistence__gwl_range,Persistence,MAE,0.9894400389961119,950
 Persistence__gwl_range,Persistence,R2,0.04831165273306728,950
 Persistence__gwl_range,Random Forest,NRMSE,-0.06667761456331354,944
@@ -422,7 +422,7 @@ Persistence__gwl_range,Random Forest,R2,0.035465737566668536,950
 Persistence__gwl_range,XGBoost,NRMSE,-0.060134141647710686,944
 Persistence__gwl_range,XGBoost,MAE,0.23261151078617093,950
 Persistence__gwl_range,XGBoost,R2,0.031092191544099826,950
-Persistence__Regime Coverage,Persistence,NRMSE,-0.2366571195202844,944
+Persistence__Regime Coverage,Persistence,NRMSE,-0.23665711952028437,944
 Persistence__Regime Coverage,Persistence,MAE,0.05438100950205267,950
 Persistence__Regime Coverage,Persistence,R2,0.16064660953985718,950
 Persistence__Regime Coverage,Random Forest,NRMSE,-0.43383977386808514,944
@@ -431,7 +431,7 @@ Persistence__Regime Coverage,Random Forest,R2,0.2798476730320921,950
 Persistence__Regime Coverage,XGBoost,NRMSE,-0.39514191048693287,944
 Persistence__Regime Coverage,XGBoost,MAE,0.03832856071598356,950
 Persistence__Regime Coverage,XGBoost,R2,0.25723144720605734,950
-Persistence__Regime Majority Share,Persistence,NRMSE,0.11173408058991298,944
+Persistence__Regime Majority Share,Persistence,NRMSE,0.11173408058991297,944
 Persistence__Regime Majority Share,Persistence,MAE,-0.07024392222403139,950
 Persistence__Regime Majority Share,Persistence,R2,-0.1915865544446939,950
 Persistence__Regime Majority Share,Random Forest,NRMSE,0.395548883601912,944
@@ -440,151 +440,151 @@ Persistence__Regime Majority Share,Random Forest,R2,-0.25889345941421893,950
 Persistence__Regime Majority Share,XGBoost,NRMSE,0.3476345561665532,944
 Persistence__Regime Majority Share,XGBoost,MAE,0.005221809617662033,950
 Persistence__Regime Majority Share,XGBoost,R2,-0.24301454713087414,950
-Persistence__Regime Valid,Persistence,NRMSE,-0.20350707886132793,944
+Persistence__Regime Valid,Persistence,NRMSE,-0.2035070788613279,944
 Persistence__Regime Valid,Persistence,MAE,-0.003381566048918715,950
 Persistence__Regime Valid,Persistence,R2,0.12908259978645684,950
 Persistence__Regime Valid,Random Forest,NRMSE,-0.24203268048073,944
 Persistence__Regime Valid,Random Forest,MAE,-0.04093989970462612,950
 Persistence__Regime Valid,Random Forest,R2,0.14589343027807844,950
-Persistence__Regime Valid,XGBoost,NRMSE,-0.21945216218627087,944
+Persistence__Regime Valid,XGBoost,NRMSE,-0.21945216218627092,944
 Persistence__Regime Valid,XGBoost,MAE,-0.022585301685951926,950
 Persistence__Regime Valid,XGBoost,R2,0.1268922146280365,950
-Persistence__Regime Weight,Persistence,NRMSE,-0.20350707886132793,944
+Persistence__Regime Weight,Persistence,NRMSE,-0.2035070788613279,944
 Persistence__Regime Weight,Persistence,MAE,-0.003381566048918715,950
 Persistence__Regime Weight,Persistence,R2,0.12908259978645684,950
 Persistence__Regime Weight,Random Forest,NRMSE,-0.24203268048073,944
 Persistence__Regime Weight,Random Forest,MAE,-0.04093989970462612,950
 Persistence__Regime Weight,Random Forest,R2,0.14589343027807844,950
-Persistence__Regime Weight,XGBoost,NRMSE,-0.21945216218627087,944
+Persistence__Regime Weight,XGBoost,NRMSE,-0.21945216218627092,944
 Persistence__Regime Weight,XGBoost,MAE,-0.022585301685951926,950
 Persistence__Regime Weight,XGBoost,R2,0.1268922146280365,950
-SHAP__Random Forest__lag_1,Persistence,NRMSE,0.021882481254911785,944
+SHAP__Random Forest__lag_1,Persistence,NRMSE,0.021882481254911792,944
 SHAP__Random Forest__lag_1,Persistence,MAE,0.9840209209348635,950
 SHAP__Random Forest__lag_1,Persistence,R2,0.03098042384834205,950
-SHAP__Random Forest__lag_1,Random Forest,NRMSE,-0.05230708123533385,944
+SHAP__Random Forest__lag_1,Random Forest,NRMSE,-0.05230708123533383,944
 SHAP__Random Forest__lag_1,Random Forest,MAE,0.046471027152976276,950
 SHAP__Random Forest__lag_1,Random Forest,R2,0.02180284239147389,950
 SHAP__Random Forest__lag_1,XGBoost,NRMSE,-0.04670136028679046,944
 SHAP__Random Forest__lag_1,XGBoost,MAE,0.12374970371178047,950
 SHAP__Random Forest__lag_1,XGBoost,R2,0.020986422132557993,950
-SHAP__Random Forest__lag_3,Persistence,NRMSE,0.11970551151665058,944
+SHAP__Random Forest__lag_3,Persistence,NRMSE,0.11970551151665061,944
 SHAP__Random Forest__lag_3,Persistence,MAE,0.035805123071329104,950
 SHAP__Random Forest__lag_3,Persistence,R2,-0.06618859257364726,950
-SHAP__Random Forest__lag_3,Random Forest,NRMSE,0.04751850817219282,944
+SHAP__Random Forest__lag_3,Random Forest,NRMSE,0.04751850817219285,944
 SHAP__Random Forest__lag_3,Random Forest,MAE,0.17949844586237432,950
 SHAP__Random Forest__lag_3,Random Forest,R2,-0.020341195515048,950
-SHAP__Random Forest__lag_3,XGBoost,NRMSE,0.016684029085968027,944
+SHAP__Random Forest__lag_3,XGBoost,NRMSE,0.016684029085968066,944
 SHAP__Random Forest__lag_3,XGBoost,MAE,0.15657251538499653,950
 SHAP__Random Forest__lag_3,XGBoost,R2,0.005078847544200352,950
-SHAP__Random Forest__lag_7,Persistence,NRMSE,0.06132724082927199,944
+SHAP__Random Forest__lag_7,Persistence,NRMSE,0.06132724082927201,944
 SHAP__Random Forest__lag_7,Persistence,MAE,0.0314522316101353,950
 SHAP__Random Forest__lag_7,Persistence,R2,-0.0460268631020666,950
-SHAP__Random Forest__lag_7,Random Forest,NRMSE,-0.006379854890792254,944
+SHAP__Random Forest__lag_7,Random Forest,NRMSE,-0.006379854890792241,944
 SHAP__Random Forest__lag_7,Random Forest,MAE,0.11545913347179237,950
 SHAP__Random Forest__lag_7,Random Forest,R2,0.024819167888279738,950
-SHAP__Random Forest__lag_7,XGBoost,NRMSE,-0.022952452334224247,944
+SHAP__Random Forest__lag_7,XGBoost,NRMSE,-0.022952452334224226,944
 SHAP__Random Forest__lag_7,XGBoost,MAE,0.09004297441493171,950
 SHAP__Random Forest__lag_7,XGBoost,R2,0.02112051016418469,950
-SHAP__Random Forest__lag_14,Persistence,NRMSE,0.14379063114092303,944
+SHAP__Random Forest__lag_14,Persistence,NRMSE,0.14379063114092305,944
 SHAP__Random Forest__lag_14,Persistence,MAE,0.01611977823647429,950
 SHAP__Random Forest__lag_14,Persistence,R2,-0.05543364661615368,950
-SHAP__Random Forest__lag_14,Random Forest,NRMSE,-0.0005784975439813433,944
+SHAP__Random Forest__lag_14,Random Forest,NRMSE,-0.0005784975439813168,944
 SHAP__Random Forest__lag_14,Random Forest,MAE,0.08396778037822222,950
 SHAP__Random Forest__lag_14,Random Forest,R2,0.029841543892713346,950
-SHAP__Random Forest__lag_14,XGBoost,NRMSE,-0.014278035403827504,944
+SHAP__Random Forest__lag_14,XGBoost,NRMSE,-0.014278035403827494,944
 SHAP__Random Forest__lag_14,XGBoost,MAE,0.06775881332706701,950
 SHAP__Random Forest__lag_14,XGBoost,R2,0.033816045025256654,950
-SHAP__Random Forest__rolling_7,Persistence,NRMSE,0.025227080887401925,944
+SHAP__Random Forest__rolling_7,Persistence,NRMSE,0.025227080887401956,944
 SHAP__Random Forest__rolling_7,Persistence,MAE,0.07764076495771118,950
 SHAP__Random Forest__rolling_7,Persistence,R2,0.010689507199724113,950
-SHAP__Random Forest__rolling_7,Random Forest,NRMSE,0.00761572578287795,944
+SHAP__Random Forest__rolling_7,Random Forest,NRMSE,0.007615725782878002,944
 SHAP__Random Forest__rolling_7,Random Forest,MAE,0.41946682678918384,950
 SHAP__Random Forest__rolling_7,Random Forest,R2,0.014018796162879222,950
-SHAP__Random Forest__rolling_7,XGBoost,NRMSE,0.020879274440824172,944
+SHAP__Random Forest__rolling_7,XGBoost,NRMSE,0.02087927444082422,944
 SHAP__Random Forest__rolling_7,XGBoost,MAE,0.40490636651079537,950
 SHAP__Random Forest__rolling_7,XGBoost,R2,0.008675871520508775,950
-SHAP__Random Forest__rolling_14,Persistence,NRMSE,-0.0394753769167651,944
+SHAP__Random Forest__rolling_14,Persistence,NRMSE,-0.03947537691676507,944
 SHAP__Random Forest__rolling_14,Persistence,MAE,0.014355446350201608,950
 SHAP__Random Forest__rolling_14,Persistence,R2,-0.05061099105907747,950
-SHAP__Random Forest__rolling_14,Random Forest,NRMSE,0.014636043899240234,944
+SHAP__Random Forest__rolling_14,Random Forest,NRMSE,0.014636043899240262,944
 SHAP__Random Forest__rolling_14,Random Forest,MAE,0.15679160734038322,950
 SHAP__Random Forest__rolling_14,Random Forest,R2,-0.009969638574401977,950
-SHAP__Random Forest__rolling_14,XGBoost,NRMSE,0.007091861389859387,944
+SHAP__Random Forest__rolling_14,XGBoost,NRMSE,0.00709186138985943,944
 SHAP__Random Forest__rolling_14,XGBoost,MAE,0.1527746659249833,950
 SHAP__Random Forest__rolling_14,XGBoost,R2,-0.017301345495481502,950
-SHAP__Random Forest__rolling_7_std,Persistence,NRMSE,0.04369288052701158,944
+SHAP__Random Forest__rolling_7_std,Persistence,NRMSE,0.04369288052701157,944
 SHAP__Random Forest__rolling_7_std,Persistence,MAE,0.17049956339965094,950
 SHAP__Random Forest__rolling_7_std,Persistence,R2,-0.03427786363562364,950
-SHAP__Random Forest__rolling_7_std,Random Forest,NRMSE,-0.01816578815539656,944
+SHAP__Random Forest__rolling_7_std,Random Forest,NRMSE,-0.01816578815539655,944
 SHAP__Random Forest__rolling_7_std,Random Forest,MAE,0.2385803632383686,950
 SHAP__Random Forest__rolling_7_std,Random Forest,R2,0.039036640673073726,950
-SHAP__Random Forest__rolling_7_std,XGBoost,NRMSE,0.10315294250352339,944
+SHAP__Random Forest__rolling_7_std,XGBoost,NRMSE,0.10315294250352347,944
 SHAP__Random Forest__rolling_7_std,XGBoost,MAE,0.24286819061519974,950
 SHAP__Random Forest__rolling_7_std,XGBoost,R2,-0.12363395985188878,950
-SHAP__Random Forest__rolling_14_std,Persistence,NRMSE,0.004987443632658517,944
+SHAP__Random Forest__rolling_14_std,Persistence,NRMSE,0.004987443632658529,944
 SHAP__Random Forest__rolling_14_std,Persistence,MAE,0.03778240017445936,950
 SHAP__Random Forest__rolling_14_std,Persistence,R2,-0.009999236615869598,950
-SHAP__Random Forest__rolling_14_std,Random Forest,NRMSE,0.014451324890359397,944
+SHAP__Random Forest__rolling_14_std,Random Forest,NRMSE,0.014451324890359416,944
 SHAP__Random Forest__rolling_14_std,Random Forest,MAE,0.2270241074540838,950
 SHAP__Random Forest__rolling_14_std,Random Forest,R2,-0.010541456836212862,950
-SHAP__Random Forest__rolling_14_std,XGBoost,NRMSE,0.08447026413329418,944
+SHAP__Random Forest__rolling_14_std,XGBoost,NRMSE,0.08447026413329425,944
 SHAP__Random Forest__rolling_14_std,XGBoost,MAE,0.1915287091326313,950
 SHAP__Random Forest__rolling_14_std,XGBoost,R2,-0.10018792203737273,950
-SHAP__Random Forest__diff_1,Persistence,NRMSE,0.01592598378852943,944
+SHAP__Random Forest__diff_1,Persistence,NRMSE,0.015925983788529434,944
 SHAP__Random Forest__diff_1,Persistence,MAE,0.9836205547443563,950
 SHAP__Random Forest__diff_1,Persistence,R2,0.0302336885161061,950
-SHAP__Random Forest__diff_1,Random Forest,NRMSE,-0.05962930142815141,944
+SHAP__Random Forest__diff_1,Random Forest,NRMSE,-0.0596293014281514,944
 SHAP__Random Forest__diff_1,Random Forest,MAE,0.05338952627996324,950
 SHAP__Random Forest__diff_1,Random Forest,R2,0.026801971171046084,950
 SHAP__Random Forest__diff_1,XGBoost,NRMSE,-0.05508461560083486,944
 SHAP__Random Forest__diff_1,XGBoost,MAE,0.12892760527828215,950
 SHAP__Random Forest__diff_1,XGBoost,R2,0.026025381026409215,950
-SHAP__Random Forest__diff_7,Persistence,NRMSE,-0.01916177353358493,944
+SHAP__Random Forest__diff_7,Persistence,NRMSE,-0.019161773533584912,944
 SHAP__Random Forest__diff_7,Persistence,MAE,0.09188745461727578,950
 SHAP__Random Forest__diff_7,Persistence,R2,0.08480317988956682,950
-SHAP__Random Forest__diff_7,Random Forest,NRMSE,-0.04507523197079551,944
+SHAP__Random Forest__diff_7,Random Forest,NRMSE,-0.04507523197079549,944
 SHAP__Random Forest__diff_7,Random Forest,MAE,0.4856383112598848,950
 SHAP__Random Forest__diff_7,Random Forest,R2,0.06987372651599781,950
-SHAP__Random Forest__diff_7,XGBoost,NRMSE,-0.019934948686691056,944
+SHAP__Random Forest__diff_7,XGBoost,NRMSE,-0.019934948686691028,944
 SHAP__Random Forest__diff_7,XGBoost,MAE,0.48022576968954184,950
 SHAP__Random Forest__diff_7,XGBoost,R2,0.048453809796773946,950
-SHAP__Random Forest__month,Persistence,NRMSE,-0.01614355225348605,944
+SHAP__Random Forest__month,Persistence,NRMSE,-0.016143552253486022,944
 SHAP__Random Forest__month,Persistence,MAE,0.02660147941683371,950
 SHAP__Random Forest__month,Persistence,R2,0.005352942083890854,950
 SHAP__Random Forest__month,Random Forest,NRMSE,-0.0492652573599058,944
 SHAP__Random Forest__month,Random Forest,MAE,0.06242277319027866,950
 SHAP__Random Forest__month,Random Forest,R2,0.03651219256227136,950
-SHAP__Random Forest__month,XGBoost,NRMSE,-0.030884595613696008,944
+SHAP__Random Forest__month,XGBoost,NRMSE,-0.030884595613695973,944
 SHAP__Random Forest__month,XGBoost,MAE,0.0660061813321325,950
 SHAP__Random Forest__month,XGBoost,R2,0.031087153482649597,950
-SHAP__Random Forest__dayofyear,Persistence,NRMSE,0.012617746772998375,944
+SHAP__Random Forest__dayofyear,Persistence,NRMSE,0.012617746772998406,944
 SHAP__Random Forest__dayofyear,Persistence,MAE,0.04545137956849827,950
 SHAP__Random Forest__dayofyear,Persistence,R2,0.013200353244521668,950
-SHAP__Random Forest__dayofyear,Random Forest,NRMSE,-0.034768465926825365,944
+SHAP__Random Forest__dayofyear,Random Forest,NRMSE,-0.03476846592682532,944
 SHAP__Random Forest__dayofyear,Random Forest,MAE,0.15722917336292225,950
 SHAP__Random Forest__dayofyear,Random Forest,R2,0.038555346696045364,950
-SHAP__Random Forest__dayofyear,XGBoost,NRMSE,-0.0371428244427738,944
+SHAP__Random Forest__dayofyear,XGBoost,NRMSE,-0.03714282444277377,944
 SHAP__Random Forest__dayofyear,XGBoost,MAE,0.15406468265321133,950
 SHAP__Random Forest__dayofyear,XGBoost,R2,0.035070668529091,950
-SHAP__Random Forest__weekday,Persistence,NRMSE,0.08919947213919045,944
+SHAP__Random Forest__weekday,Persistence,NRMSE,0.0891994721391905,944
 SHAP__Random Forest__weekday,Persistence,MAE,0.08116144071175002,950
 SHAP__Random Forest__weekday,Persistence,R2,-0.1104330933280624,950
-SHAP__Random Forest__weekday,Random Forest,NRMSE,-0.016939080616435783,944
+SHAP__Random Forest__weekday,Random Forest,NRMSE,-0.016939080616435773,944
 SHAP__Random Forest__weekday,Random Forest,MAE,0.17990764063397155,950
 SHAP__Random Forest__weekday,Random Forest,R2,0.007519391319448051,950
-SHAP__Random Forest__weekday,XGBoost,NRMSE,-0.013503717464154163,944
+SHAP__Random Forest__weekday,XGBoost,NRMSE,-0.013503717464154154,944
 SHAP__Random Forest__weekday,XGBoost,MAE,0.16474917254472948,950
 SHAP__Random Forest__weekday,XGBoost,R2,-0.007291600069904681,950
-SHAP__Random Forest__is_monsoon,Persistence,NRMSE,-0.07198325286165452,944
+SHAP__Random Forest__is_monsoon,Persistence,NRMSE,-0.07198325286165451,944
 SHAP__Random Forest__is_monsoon,Persistence,MAE,0.003967605465665034,950
 SHAP__Random Forest__is_monsoon,Persistence,R2,0.009916665114852355,950
-SHAP__Random Forest__is_monsoon,Random Forest,NRMSE,0.006207528044727639,944
+SHAP__Random Forest__is_monsoon,Random Forest,NRMSE,0.006207528044727641,944
 SHAP__Random Forest__is_monsoon,Random Forest,MAE,0.09604805243155393,950
 SHAP__Random Forest__is_monsoon,Random Forest,R2,-0.02682799090229458,950
-SHAP__Random Forest__is_monsoon,XGBoost,NRMSE,-0.010400478965076355,944
+SHAP__Random Forest__is_monsoon,XGBoost,NRMSE,-0.010400478965076341,944
 SHAP__Random Forest__is_monsoon,XGBoost,MAE,0.04286765995794554,950
 SHAP__Random Forest__is_monsoon,XGBoost,R2,0.002512593501742168,950
-SHAP__Random Forest__top1_value,Persistence,NRMSE,0.02120789784998476,944
+SHAP__Random Forest__top1_value,Persistence,NRMSE,0.021207897849984763,944
 SHAP__Random Forest__top1_value,Persistence,MAE,0.985608962215533,950
 SHAP__Random Forest__top1_value,Persistence,R2,0.03151441304085189,950
 SHAP__Random Forest__top1_value,Random Forest,NRMSE,-0.05246890673613408,944
@@ -593,97 +593,97 @@ SHAP__Random Forest__top1_value,Random Forest,R2,0.022694946940320048,950
 SHAP__Random Forest__top1_value,XGBoost,NRMSE,-0.04670949838143988,944
 SHAP__Random Forest__top1_value,XGBoost,MAE,0.1343205923861055,950
 SHAP__Random Forest__top1_value,XGBoost,R2,0.021617268108270058,950
-SHAP__Random Forest__top2_value,Persistence,NRMSE,0.020770956477001452,944
+SHAP__Random Forest__top2_value,Persistence,NRMSE,0.020770956477001466,944
 SHAP__Random Forest__top2_value,Persistence,MAE,0.9827071365475716,950
 SHAP__Random Forest__top2_value,Persistence,R2,0.0298228574397088,950
-SHAP__Random Forest__top2_value,Random Forest,NRMSE,-0.051031353800983045,944
+SHAP__Random Forest__top2_value,Random Forest,NRMSE,-0.05103135380098304,944
 SHAP__Random Forest__top2_value,Random Forest,MAE,0.1067046982342899,950
 SHAP__Random Forest__top2_value,Random Forest,R2,0.021531866240342205,950
-SHAP__Random Forest__top2_value,XGBoost,NRMSE,-0.044990327174717695,944
+SHAP__Random Forest__top2_value,XGBoost,NRMSE,-0.04499032717471768,944
 SHAP__Random Forest__top2_value,XGBoost,MAE,0.17892233815034217,950
 SHAP__Random Forest__top2_value,XGBoost,R2,0.020721746219521924,950
-SHAP__Random Forest__top3_value,Persistence,NRMSE,0.0019528487092209238,944
+SHAP__Random Forest__top3_value,Persistence,NRMSE,0.0019528487092209624,944
 SHAP__Random Forest__top3_value,Persistence,MAE,0.08245711843014068,950
 SHAP__Random Forest__top3_value,Persistence,R2,-0.010507079385116368,950
-SHAP__Random Forest__top3_value,Random Forest,NRMSE,-0.011503474023671401,944
+SHAP__Random Forest__top3_value,Random Forest,NRMSE,-0.011503474023671363,944
 SHAP__Random Forest__top3_value,Random Forest,MAE,0.32470909294542816,950
 SHAP__Random Forest__top3_value,Random Forest,R2,0.0035917247174117174,950
-SHAP__Random Forest__top3_value,XGBoost,NRMSE,-0.01590154437800962,944
+SHAP__Random Forest__top3_value,XGBoost,NRMSE,-0.015901544378009568,944
 SHAP__Random Forest__top3_value,XGBoost,MAE,0.30451608463847085,950
 SHAP__Random Forest__top3_value,XGBoost,R2,0.020442707394162905,950
-SHAP__XGBoost__lag_1,Persistence,NRMSE,0.023059840868659965,944
+SHAP__XGBoost__lag_1,Persistence,NRMSE,0.02305984086865997,944
 SHAP__XGBoost__lag_1,Persistence,MAE,0.9843707429637184,950
 SHAP__XGBoost__lag_1,Persistence,R2,0.030600380669552684,950
-SHAP__XGBoost__lag_1,Random Forest,NRMSE,-0.052803860629376385,944
+SHAP__XGBoost__lag_1,Random Forest,NRMSE,-0.05280386062937638,944
 SHAP__XGBoost__lag_1,Random Forest,MAE,0.0481552066859325,950
 SHAP__XGBoost__lag_1,Random Forest,R2,0.02196982460304113,950
 SHAP__XGBoost__lag_1,XGBoost,NRMSE,-0.046637398030188244,944
 SHAP__XGBoost__lag_1,XGBoost,MAE,0.1275157644186059,950
 SHAP__XGBoost__lag_1,XGBoost,R2,0.0187483265711833,950
-SHAP__XGBoost__lag_3,Persistence,NRMSE,0.13325780700830384,944
+SHAP__XGBoost__lag_3,Persistence,NRMSE,0.1332578070083039,944
 SHAP__XGBoost__lag_3,Persistence,MAE,0.5160907934984886,950
 SHAP__XGBoost__lag_3,Persistence,R2,-0.025261261122838247,950
-SHAP__XGBoost__lag_3,Random Forest,NRMSE,0.08051584679228783,944
+SHAP__XGBoost__lag_3,Random Forest,NRMSE,0.0805158467922879,944
 SHAP__XGBoost__lag_3,Random Forest,MAE,0.28965250941385356,950
 SHAP__XGBoost__lag_3,Random Forest,R2,-0.032738439420888145,950
-SHAP__XGBoost__lag_3,XGBoost,NRMSE,0.07850905747876592,944
+SHAP__XGBoost__lag_3,XGBoost,NRMSE,0.07850905747876595,944
 SHAP__XGBoost__lag_3,XGBoost,MAE,0.32074610001447434,950
 SHAP__XGBoost__lag_3,XGBoost,R2,-0.03136607940638968,950
-SHAP__XGBoost__lag_7,Persistence,NRMSE,0.018571107277710944,944
+SHAP__XGBoost__lag_7,Persistence,NRMSE,0.01857110727771095,944
 SHAP__XGBoost__lag_7,Persistence,MAE,0.9800868507893663,950
 SHAP__XGBoost__lag_7,Persistence,R2,0.03475653446237834,950
 SHAP__XGBoost__lag_7,Random Forest,NRMSE,-0.051090135524532156,944
 SHAP__XGBoost__lag_7,Random Forest,MAE,0.06458692295645238,950
 SHAP__XGBoost__lag_7,Random Forest,R2,0.02314153298168019,950
-SHAP__XGBoost__lag_7,XGBoost,NRMSE,-0.04745444203217511,944
+SHAP__XGBoost__lag_7,XGBoost,NRMSE,-0.0474544420321751,944
 SHAP__XGBoost__lag_7,XGBoost,MAE,0.140036116791543,950
 SHAP__XGBoost__lag_7,XGBoost,R2,0.02477248221858996,950
-SHAP__XGBoost__lag_14,Persistence,NRMSE,0.046710838217254455,944
+SHAP__XGBoost__lag_14,Persistence,NRMSE,0.04671083821725451,944
 SHAP__XGBoost__lag_14,Persistence,MAE,0.23152501488180982,950
 SHAP__XGBoost__lag_14,Persistence,R2,0.022581406460379806,950
-SHAP__XGBoost__lag_14,Random Forest,NRMSE,0.05521052510188849,944
+SHAP__XGBoost__lag_14,Random Forest,NRMSE,0.0552105251018885,944
 SHAP__XGBoost__lag_14,Random Forest,MAE,0.1495975523774341,950
 SHAP__XGBoost__lag_14,Random Forest,R2,-0.03162370104996509,950
-SHAP__XGBoost__lag_14,XGBoost,NRMSE,0.05230703258427218,944
+SHAP__XGBoost__lag_14,XGBoost,NRMSE,0.05230703258427221,944
 SHAP__XGBoost__lag_14,XGBoost,MAE,0.18133204782268944,950
 SHAP__XGBoost__lag_14,XGBoost,R2,0.0024953987373056534,950
-SHAP__XGBoost__rolling_7,Persistence,NRMSE,0.006621101422051483,944
+SHAP__XGBoost__rolling_7,Persistence,NRMSE,0.006621101422051501,944
 SHAP__XGBoost__rolling_7,Persistence,MAE,0.8932845179941963,950
 SHAP__XGBoost__rolling_7,Persistence,R2,0.03725793859371334,950
-SHAP__XGBoost__rolling_7,Random Forest,NRMSE,-0.04419908954254004,944
+SHAP__XGBoost__rolling_7,Random Forest,NRMSE,-0.04419908954254002,944
 SHAP__XGBoost__rolling_7,Random Forest,MAE,0.17997752577477102,950
 SHAP__XGBoost__rolling_7,Random Forest,R2,0.021859747930723726,950
-SHAP__XGBoost__rolling_7,XGBoost,NRMSE,-0.026820312274032566,944
+SHAP__XGBoost__rolling_7,XGBoost,NRMSE,-0.026820312274032546,944
 SHAP__XGBoost__rolling_7,XGBoost,MAE,0.24468957845220363,950
 SHAP__XGBoost__rolling_7,XGBoost,R2,0.011061020754552554,950
-SHAP__XGBoost__rolling_14,Persistence,NRMSE,0.009386766904420227,944
+SHAP__XGBoost__rolling_14,Persistence,NRMSE,0.00938676690442023,944
 SHAP__XGBoost__rolling_14,Persistence,MAE,0.977089383919396,950
 SHAP__XGBoost__rolling_14,Persistence,R2,0.02550541238608427,950
 SHAP__XGBoost__rolling_14,Random Forest,NRMSE,-0.054641812577360865,944
 SHAP__XGBoost__rolling_14,Random Forest,MAE,0.053445981699003865,950
 SHAP__XGBoost__rolling_14,Random Forest,R2,0.021249573487979862,950
-SHAP__XGBoost__rolling_14,XGBoost,NRMSE,-0.04638381036156057,944
+SHAP__XGBoost__rolling_14,XGBoost,NRMSE,-0.046383810361560564,944
 SHAP__XGBoost__rolling_14,XGBoost,MAE,0.12980510447987678,950
 SHAP__XGBoost__rolling_14,XGBoost,R2,0.015876926698689304,950
-SHAP__XGBoost__rolling_7_std,Persistence,NRMSE,0.014324819194934906,944
+SHAP__XGBoost__rolling_7_std,Persistence,NRMSE,0.01432481919493491,944
 SHAP__XGBoost__rolling_7_std,Persistence,MAE,0.9793037224646192,950
 SHAP__XGBoost__rolling_7_std,Persistence,R2,0.037958629151405396,950
-SHAP__XGBoost__rolling_7_std,Random Forest,NRMSE,-0.053252635830182665,944
+SHAP__XGBoost__rolling_7_std,Random Forest,NRMSE,-0.05325263583018267,944
 SHAP__XGBoost__rolling_7_std,Random Forest,MAE,0.07853697400508841,950
 SHAP__XGBoost__rolling_7_std,Random Forest,R2,0.02518422286532448,950
-SHAP__XGBoost__rolling_7_std,XGBoost,NRMSE,-0.048413414380739844,944
+SHAP__XGBoost__rolling_7_std,XGBoost,NRMSE,-0.04841341438073984,944
 SHAP__XGBoost__rolling_7_std,XGBoost,MAE,0.1496643811787318,950
 SHAP__XGBoost__rolling_7_std,XGBoost,R2,0.023227825083590486,950
-SHAP__XGBoost__rolling_14_std,Persistence,NRMSE,-0.06030338209347662,944
+SHAP__XGBoost__rolling_14_std,Persistence,NRMSE,-0.060303382093476576,944
 SHAP__XGBoost__rolling_14_std,Persistence,MAE,0.2453844621474125,950
 SHAP__XGBoost__rolling_14_std,Persistence,R2,0.01662563409797623,950
 SHAP__XGBoost__rolling_14_std,Random Forest,NRMSE,-0.019756105651916874,944
 SHAP__XGBoost__rolling_14_std,Random Forest,MAE,0.14046043328625746,950
 SHAP__XGBoost__rolling_14_std,Random Forest,R2,-0.009806926538436197,950
-SHAP__XGBoost__rolling_14_std,XGBoost,NRMSE,-0.029950027782801564,944
+SHAP__XGBoost__rolling_14_std,XGBoost,NRMSE,-0.029950027782801557,944
 SHAP__XGBoost__rolling_14_std,XGBoost,MAE,0.1112961774010659,950
 SHAP__XGBoost__rolling_14_std,XGBoost,R2,0.01379789420444345,950
-SHAP__XGBoost__diff_1,Persistence,NRMSE,0.01216229781823044,944
+SHAP__XGBoost__diff_1,Persistence,NRMSE,0.012162297818230451,944
 SHAP__XGBoost__diff_1,Persistence,MAE,0.9842242606990587,950
 SHAP__XGBoost__diff_1,Persistence,R2,0.034314216166618,950
 SHAP__XGBoost__diff_1,Random Forest,NRMSE,-0.06394080560564287,944
@@ -692,97 +692,97 @@ SHAP__XGBoost__diff_1,Random Forest,R2,0.03098471957144949,950
 SHAP__XGBoost__diff_1,XGBoost,NRMSE,-0.054505410970013844,944
 SHAP__XGBoost__diff_1,XGBoost,MAE,0.14762670524535465,950
 SHAP__XGBoost__diff_1,XGBoost,R2,0.023059090156777227,950
-SHAP__XGBoost__diff_7,Persistence,NRMSE,0.01832298082070949,944
+SHAP__XGBoost__diff_7,Persistence,NRMSE,0.018322980820709503,944
 SHAP__XGBoost__diff_7,Persistence,MAE,0.956664556868663,950
 SHAP__XGBoost__diff_7,Persistence,R2,0.05490262139514828,950
-SHAP__XGBoost__diff_7,Random Forest,NRMSE,-0.06217457787605097,944
+SHAP__XGBoost__diff_7,Random Forest,NRMSE,-0.062174577876050977,944
 SHAP__XGBoost__diff_7,Random Forest,MAE,0.19288947002254916,950
 SHAP__XGBoost__diff_7,Random Forest,R2,0.04371823306407408,950
-SHAP__XGBoost__diff_7,XGBoost,NRMSE,-0.04518195545298533,944
+SHAP__XGBoost__diff_7,XGBoost,NRMSE,-0.04518195545298531,944
 SHAP__XGBoost__diff_7,XGBoost,MAE,0.2616557286365935,950
 SHAP__XGBoost__diff_7,XGBoost,R2,0.03022421765410329,950
-SHAP__XGBoost__month,Persistence,NRMSE,-0.016049060294280142,944
+SHAP__XGBoost__month,Persistence,NRMSE,-0.016049060294280094,944
 SHAP__XGBoost__month,Persistence,MAE,0.16728703201169207,950
 SHAP__XGBoost__month,Persistence,R2,-0.009846136458960014,950
 SHAP__XGBoost__month,Random Forest,NRMSE,-0.06934856062180018,944
 SHAP__XGBoost__month,Random Forest,MAE,0.054162031685517455,950
 SHAP__XGBoost__month,Random Forest,R2,0.04133093350300064,950
-SHAP__XGBoost__month,XGBoost,NRMSE,0.05450517717924342,944
+SHAP__XGBoost__month,XGBoost,NRMSE,0.05450517717924344,944
 SHAP__XGBoost__month,XGBoost,MAE,0.07511639787938819,950
 SHAP__XGBoost__month,XGBoost,R2,-0.0542558648084264,950
-SHAP__XGBoost__dayofyear,Persistence,NRMSE,0.04113460739127193,944
+SHAP__XGBoost__dayofyear,Persistence,NRMSE,0.04113460739127199,944
 SHAP__XGBoost__dayofyear,Persistence,MAE,0.15820263239583068,950
 SHAP__XGBoost__dayofyear,Persistence,R2,-0.05856336564856565,950
-SHAP__XGBoost__dayofyear,Random Forest,NRMSE,-0.03144951188020695,944
+SHAP__XGBoost__dayofyear,Random Forest,NRMSE,-0.03144951188020692,944
 SHAP__XGBoost__dayofyear,Random Forest,MAE,0.14824625721470205,950
 SHAP__XGBoost__dayofyear,Random Forest,R2,0.03178816826839412,950
-SHAP__XGBoost__dayofyear,XGBoost,NRMSE,-0.015930878696079544,944
+SHAP__XGBoost__dayofyear,XGBoost,NRMSE,-0.015930878696079516,944
 SHAP__XGBoost__dayofyear,XGBoost,MAE,0.1545721629684682,950
 SHAP__XGBoost__dayofyear,XGBoost,R2,-0.0034684428891713524,950
-SHAP__XGBoost__weekday,Persistence,NRMSE,0.0740719544983539,944
+SHAP__XGBoost__weekday,Persistence,NRMSE,0.07407195449835392,944
 SHAP__XGBoost__weekday,Persistence,MAE,0.729040743829059,950
 SHAP__XGBoost__weekday,Persistence,R2,-0.04772616918886018,950
-SHAP__XGBoost__weekday,Random Forest,NRMSE,-0.03916208076534254,944
+SHAP__XGBoost__weekday,Random Forest,NRMSE,-0.03916208076534251,944
 SHAP__XGBoost__weekday,Random Forest,MAE,0.2917563422799574,950
 SHAP__XGBoost__weekday,Random Forest,R2,0.0274017121830583,950
-SHAP__XGBoost__weekday,XGBoost,NRMSE,-0.01992000287746735,944
+SHAP__XGBoost__weekday,XGBoost,NRMSE,-0.019920002877467313,944
 SHAP__XGBoost__weekday,XGBoost,MAE,0.36949735794944355,950
 SHAP__XGBoost__weekday,XGBoost,R2,-0.0005063755557973244,950
-SHAP__XGBoost__is_monsoon,Persistence,NRMSE,-0.058607507954126524,944
+SHAP__XGBoost__is_monsoon,Persistence,NRMSE,-0.05860750795412652,944
 SHAP__XGBoost__is_monsoon,Persistence,MAE,0.004621859074539525,950
 SHAP__XGBoost__is_monsoon,Persistence,R2,0.00417684138390216,950
-SHAP__XGBoost__is_monsoon,Random Forest,NRMSE,0.0026658594424421615,944
+SHAP__XGBoost__is_monsoon,Random Forest,NRMSE,0.002665859442442155,944
 SHAP__XGBoost__is_monsoon,Random Forest,MAE,0.09881295760773637,950
 SHAP__XGBoost__is_monsoon,Random Forest,R2,-0.021636660738925773,950
-SHAP__XGBoost__is_monsoon,XGBoost,NRMSE,-0.015174459007043688,944
+SHAP__XGBoost__is_monsoon,XGBoost,NRMSE,-0.015174459007043681,944
 SHAP__XGBoost__is_monsoon,XGBoost,MAE,0.04222269728032927,950
 SHAP__XGBoost__is_monsoon,XGBoost,R2,0.00810010045779119,950
-SHAP__XGBoost__top1_value,Persistence,NRMSE,0.02169551464070523,944
+SHAP__XGBoost__top1_value,Persistence,NRMSE,0.021695514640705234,944
 SHAP__XGBoost__top1_value,Persistence,MAE,0.985384627155313,950
 SHAP__XGBoost__top1_value,Persistence,R2,0.030925530303868607,950
 SHAP__XGBoost__top1_value,Random Forest,NRMSE,-0.053142708308860864,944
 SHAP__XGBoost__top1_value,Random Forest,MAE,0.0574138826338666,950
 SHAP__XGBoost__top1_value,Random Forest,R2,0.02290269590328336,950
-SHAP__XGBoost__top1_value,XGBoost,NRMSE,-0.04592522735494783,944
+SHAP__XGBoost__top1_value,XGBoost,NRMSE,-0.04592522735494781,944
 SHAP__XGBoost__top1_value,XGBoost,MAE,0.1359686184152553,950
 SHAP__XGBoost__top1_value,XGBoost,R2,0.018459561634257323,950
-SHAP__XGBoost__top2_value,Persistence,NRMSE,0.024912267784205355,944
+SHAP__XGBoost__top2_value,Persistence,NRMSE,0.024912267784205376,944
 SHAP__XGBoost__top2_value,Persistence,MAE,0.9729822830555003,950
 SHAP__XGBoost__top2_value,Persistence,R2,0.025244110094312894,950
 SHAP__XGBoost__top2_value,Random Forest,NRMSE,-0.04144196451384022,944
 SHAP__XGBoost__top2_value,Random Forest,MAE,0.14041998121116228,950
 SHAP__XGBoost__top2_value,Random Forest,R2,0.015527960888381008,950
-SHAP__XGBoost__top2_value,XGBoost,NRMSE,-0.032205988786478804,944
+SHAP__XGBoost__top2_value,XGBoost,NRMSE,-0.03220598878647878,944
 SHAP__XGBoost__top2_value,XGBoost,MAE,0.21193536833756027,950
 SHAP__XGBoost__top2_value,XGBoost,R2,0.011696944241700962,950
-SHAP__XGBoost__top3_value,Persistence,NRMSE,0.016975324982589246,944
+SHAP__XGBoost__top3_value,Persistence,NRMSE,0.016975324982589256,944
 SHAP__XGBoost__top3_value,Persistence,MAE,0.9850316538597925,950
 SHAP__XGBoost__top3_value,Persistence,R2,0.032597020395053654,950
-SHAP__XGBoost__top3_value,Random Forest,NRMSE,-0.05515892493563603,944
+SHAP__XGBoost__top3_value,Random Forest,NRMSE,-0.05515892493563602,944
 SHAP__XGBoost__top3_value,Random Forest,MAE,0.09978961784142616,950
 SHAP__XGBoost__top3_value,Random Forest,R2,0.024306458167590146,950
-SHAP__XGBoost__top3_value,XGBoost,NRMSE,-0.04685298013809252,944
+SHAP__XGBoost__top3_value,XGBoost,NRMSE,-0.04685298013809249,944
 SHAP__XGBoost__top3_value,XGBoost,MAE,0.17396008755574918,950
 SHAP__XGBoost__top3_value,XGBoost,R2,0.020396373696026586,950
-Random Forest__gwl_min,Persistence,NRMSE,-0.006101346140385881,944
+Random Forest__gwl_min,Persistence,NRMSE,-0.0061013461403859005,944
 Random Forest__gwl_min,Persistence,MAE,-0.9411521859895337,950
 Random Forest__gwl_min,Persistence,R2,-0.027567003440360935,950
-Random Forest__gwl_min,Random Forest,NRMSE,0.06327775992810375,944
+Random Forest__gwl_min,Random Forest,NRMSE,0.06327775992810372,944
 Random Forest__gwl_min,Random Forest,MAE,-0.11601052135656023,950
 Random Forest__gwl_min,Random Forest,R2,-0.03019118178193136,950
 Random Forest__gwl_min,XGBoost,NRMSE,0.06643792520722076,944
 Random Forest__gwl_min,XGBoost,MAE,-0.17518182276913602,950
 Random Forest__gwl_min,XGBoost,R2,-0.04134556798424748,950
-Random Forest__gwl_max,Persistence,NRMSE,-0.018917958948674974,944
+Random Forest__gwl_max,Persistence,NRMSE,-0.018917958948675,944
 Random Forest__gwl_max,Persistence,MAE,0.013342902138301877,950
 Random Forest__gwl_max,Persistence,R2,0.05658682822876046,950
-Random Forest__gwl_max,Random Forest,NRMSE,-0.0013965080017181426,944
+Random Forest__gwl_max,Random Forest,NRMSE,-0.0013965080017181567,944
 Random Forest__gwl_max,Random Forest,MAE,0.11594546844258863,950
 Random Forest__gwl_max,Random Forest,R2,0.011258711278713422,950
-Random Forest__gwl_max,XGBoost,NRMSE,0.027272192967634282,944
+Random Forest__gwl_max,XGBoost,NRMSE,0.02727219296763427,944
 Random Forest__gwl_max,XGBoost,MAE,0.14331066711959714,950
 Random Forest__gwl_max,XGBoost,R2,-0.035388963343893375,950
-Random Forest__gwl_range,Persistence,NRMSE,-0.00011658365098462666,944
+Random Forest__gwl_range,Persistence,NRMSE,-0.00011658365098461297,944
 Random Forest__gwl_range,Persistence,MAE,0.9894400389961119,950
 Random Forest__gwl_range,Persistence,R2,0.04831165273306728,950
 Random Forest__gwl_range,Random Forest,NRMSE,-0.06667761456331354,944
@@ -791,7 +791,7 @@ Random Forest__gwl_range,Random Forest,R2,0.035465737566668536,950
 Random Forest__gwl_range,XGBoost,NRMSE,-0.060134141647710686,944
 Random Forest__gwl_range,XGBoost,MAE,0.23261151078617093,950
 Random Forest__gwl_range,XGBoost,R2,0.031092191544099826,950
-Random Forest__Regime Coverage,Persistence,NRMSE,-0.2366571195202844,944
+Random Forest__Regime Coverage,Persistence,NRMSE,-0.23665711952028437,944
 Random Forest__Regime Coverage,Persistence,MAE,0.05438100950205267,950
 Random Forest__Regime Coverage,Persistence,R2,0.16064660953985718,950
 Random Forest__Regime Coverage,Random Forest,NRMSE,-0.43383977386808514,944
@@ -800,7 +800,7 @@ Random Forest__Regime Coverage,Random Forest,R2,0.2798476730320921,950
 Random Forest__Regime Coverage,XGBoost,NRMSE,-0.39514191048693287,944
 Random Forest__Regime Coverage,XGBoost,MAE,0.03832856071598356,950
 Random Forest__Regime Coverage,XGBoost,R2,0.25723144720605734,950
-Random Forest__Regime Majority Share,Persistence,NRMSE,0.11173408058991298,944
+Random Forest__Regime Majority Share,Persistence,NRMSE,0.11173408058991297,944
 Random Forest__Regime Majority Share,Persistence,MAE,-0.07024392222403139,950
 Random Forest__Regime Majority Share,Persistence,R2,-0.1915865544446939,950
 Random Forest__Regime Majority Share,Random Forest,NRMSE,0.395548883601912,944
@@ -809,43 +809,43 @@ Random Forest__Regime Majority Share,Random Forest,R2,-0.25889345941421893,950
 Random Forest__Regime Majority Share,XGBoost,NRMSE,0.3476345561665532,944
 Random Forest__Regime Majority Share,XGBoost,MAE,0.005221809617662033,950
 Random Forest__Regime Majority Share,XGBoost,R2,-0.24301454713087414,950
-Random Forest__Regime Valid,Persistence,NRMSE,-0.20350707886132793,944
+Random Forest__Regime Valid,Persistence,NRMSE,-0.2035070788613279,944
 Random Forest__Regime Valid,Persistence,MAE,-0.003381566048918715,950
 Random Forest__Regime Valid,Persistence,R2,0.12908259978645684,950
 Random Forest__Regime Valid,Random Forest,NRMSE,-0.24203268048073,944
 Random Forest__Regime Valid,Random Forest,MAE,-0.04093989970462612,950
 Random Forest__Regime Valid,Random Forest,R2,0.14589343027807844,950
-Random Forest__Regime Valid,XGBoost,NRMSE,-0.21945216218627087,944
+Random Forest__Regime Valid,XGBoost,NRMSE,-0.21945216218627092,944
 Random Forest__Regime Valid,XGBoost,MAE,-0.022585301685951926,950
 Random Forest__Regime Valid,XGBoost,R2,0.1268922146280365,950
-Random Forest__Regime Weight,Persistence,NRMSE,-0.20350707886132793,944
+Random Forest__Regime Weight,Persistence,NRMSE,-0.2035070788613279,944
 Random Forest__Regime Weight,Persistence,MAE,-0.003381566048918715,950
 Random Forest__Regime Weight,Persistence,R2,0.12908259978645684,950
 Random Forest__Regime Weight,Random Forest,NRMSE,-0.24203268048073,944
 Random Forest__Regime Weight,Random Forest,MAE,-0.04093989970462612,950
 Random Forest__Regime Weight,Random Forest,R2,0.14589343027807844,950
-Random Forest__Regime Weight,XGBoost,NRMSE,-0.21945216218627087,944
+Random Forest__Regime Weight,XGBoost,NRMSE,-0.21945216218627092,944
 Random Forest__Regime Weight,XGBoost,MAE,-0.022585301685951926,950
 Random Forest__Regime Weight,XGBoost,R2,0.1268922146280365,950
-XGBoost__gwl_min,Persistence,NRMSE,-0.006101346140385881,944
+XGBoost__gwl_min,Persistence,NRMSE,-0.0061013461403859005,944
 XGBoost__gwl_min,Persistence,MAE,-0.9411521859895337,950
 XGBoost__gwl_min,Persistence,R2,-0.027567003440360935,950
-XGBoost__gwl_min,Random Forest,NRMSE,0.06327775992810375,944
+XGBoost__gwl_min,Random Forest,NRMSE,0.06327775992810372,944
 XGBoost__gwl_min,Random Forest,MAE,-0.11601052135656023,950
 XGBoost__gwl_min,Random Forest,R2,-0.03019118178193136,950
 XGBoost__gwl_min,XGBoost,NRMSE,0.06643792520722076,944
 XGBoost__gwl_min,XGBoost,MAE,-0.17518182276913602,950
 XGBoost__gwl_min,XGBoost,R2,-0.04134556798424748,950
-XGBoost__gwl_max,Persistence,NRMSE,-0.018917958948674974,944
+XGBoost__gwl_max,Persistence,NRMSE,-0.018917958948675,944
 XGBoost__gwl_max,Persistence,MAE,0.013342902138301877,950
 XGBoost__gwl_max,Persistence,R2,0.05658682822876046,950
-XGBoost__gwl_max,Random Forest,NRMSE,-0.0013965080017181426,944
+XGBoost__gwl_max,Random Forest,NRMSE,-0.0013965080017181567,944
 XGBoost__gwl_max,Random Forest,MAE,0.11594546844258863,950
 XGBoost__gwl_max,Random Forest,R2,0.011258711278713422,950
-XGBoost__gwl_max,XGBoost,NRMSE,0.027272192967634282,944
+XGBoost__gwl_max,XGBoost,NRMSE,0.02727219296763427,944
 XGBoost__gwl_max,XGBoost,MAE,0.14331066711959714,950
 XGBoost__gwl_max,XGBoost,R2,-0.035388963343893375,950
-XGBoost__gwl_range,Persistence,NRMSE,-0.00011658365098462666,944
+XGBoost__gwl_range,Persistence,NRMSE,-0.00011658365098461297,944
 XGBoost__gwl_range,Persistence,MAE,0.9894400389961119,950
 XGBoost__gwl_range,Persistence,R2,0.04831165273306728,950
 XGBoost__gwl_range,Random Forest,NRMSE,-0.06667761456331354,944
@@ -854,7 +854,7 @@ XGBoost__gwl_range,Random Forest,R2,0.035465737566668536,950
 XGBoost__gwl_range,XGBoost,NRMSE,-0.060134141647710686,944
 XGBoost__gwl_range,XGBoost,MAE,0.23261151078617093,950
 XGBoost__gwl_range,XGBoost,R2,0.031092191544099826,950
-XGBoost__Regime Coverage,Persistence,NRMSE,-0.2366571195202844,944
+XGBoost__Regime Coverage,Persistence,NRMSE,-0.23665711952028437,944
 XGBoost__Regime Coverage,Persistence,MAE,0.05438100950205267,950
 XGBoost__Regime Coverage,Persistence,R2,0.16064660953985718,950
 XGBoost__Regime Coverage,Random Forest,NRMSE,-0.43383977386808514,944
@@ -863,7 +863,7 @@ XGBoost__Regime Coverage,Random Forest,R2,0.2798476730320921,950
 XGBoost__Regime Coverage,XGBoost,NRMSE,-0.39514191048693287,944
 XGBoost__Regime Coverage,XGBoost,MAE,0.03832856071598356,950
 XGBoost__Regime Coverage,XGBoost,R2,0.25723144720605734,950
-XGBoost__Regime Majority Share,Persistence,NRMSE,0.11173408058991298,944
+XGBoost__Regime Majority Share,Persistence,NRMSE,0.11173408058991297,944
 XGBoost__Regime Majority Share,Persistence,MAE,-0.07024392222403139,950
 XGBoost__Regime Majority Share,Persistence,R2,-0.1915865544446939,950
 XGBoost__Regime Majority Share,Random Forest,NRMSE,0.395548883601912,944
@@ -872,21 +872,21 @@ XGBoost__Regime Majority Share,Random Forest,R2,-0.25889345941421893,950
 XGBoost__Regime Majority Share,XGBoost,NRMSE,0.3476345561665532,944
 XGBoost__Regime Majority Share,XGBoost,MAE,0.005221809617662033,950
 XGBoost__Regime Majority Share,XGBoost,R2,-0.24301454713087414,950
-XGBoost__Regime Valid,Persistence,NRMSE,-0.20350707886132793,944
+XGBoost__Regime Valid,Persistence,NRMSE,-0.2035070788613279,944
 XGBoost__Regime Valid,Persistence,MAE,-0.003381566048918715,950
 XGBoost__Regime Valid,Persistence,R2,0.12908259978645684,950
 XGBoost__Regime Valid,Random Forest,NRMSE,-0.24203268048073,944
 XGBoost__Regime Valid,Random Forest,MAE,-0.04093989970462612,950
 XGBoost__Regime Valid,Random Forest,R2,0.14589343027807844,950
-XGBoost__Regime Valid,XGBoost,NRMSE,-0.21945216218627087,944
+XGBoost__Regime Valid,XGBoost,NRMSE,-0.21945216218627092,944
 XGBoost__Regime Valid,XGBoost,MAE,-0.022585301685951926,950
 XGBoost__Regime Valid,XGBoost,R2,0.1268922146280365,950
-XGBoost__Regime Weight,Persistence,NRMSE,-0.20350707886132793,944
+XGBoost__Regime Weight,Persistence,NRMSE,-0.2035070788613279,944
 XGBoost__Regime Weight,Persistence,MAE,-0.003381566048918715,950
 XGBoost__Regime Weight,Persistence,R2,0.12908259978645684,950
 XGBoost__Regime Weight,Random Forest,NRMSE,-0.24203268048073,944
 XGBoost__Regime Weight,Random Forest,MAE,-0.04093989970462612,950
 XGBoost__Regime Weight,Random Forest,R2,0.14589343027807844,950
-XGBoost__Regime Weight,XGBoost,NRMSE,-0.21945216218627087,944
+XGBoost__Regime Weight,XGBoost,NRMSE,-0.21945216218627092,944
 XGBoost__Regime Weight,XGBoost,MAE,-0.022585301685951926,950
 XGBoost__Regime Weight,XGBoost,R2,0.1268922146280365,950

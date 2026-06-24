@@ -806,6 +806,8 @@ def main():
         pub_rows.append({
             "Model":           row["Model"],
             "RMSE (mean)":     row.get("RMSE_mean",  np.nan),
+            "NRMSE (mean)":    row.get("NRMSE_mean", np.nan),   
+            "NRMSE (std)":     row.get("NRMSE_std",  np.nan),   
             "MAE (mean)":      row.get("MAE_mean",   np.nan),
             "MAPE (mean)":     row.get("MAPE_mean",  np.nan),
             "R2 (mean)":       row.get("R2_mean",    np.nan),
@@ -839,7 +841,7 @@ def main():
     print("\nSTEP 9 - Metrics preview")
     # FIX 2a (continued): preview column renamed from "NSE (mean)" to "mNSE (mean)"
     preview_cols = [
-        "Model", "RMSE (mean)", "R2 (mean)", "mNSE (mean)", "KGE (mean)",
+        "Model", "RMSE (mean)","NRMSE (mean)", "R2 (mean)", "mNSE (mean)", "KGE (mean)",
         "Valid Districts",
     ]
     preview_cols = [c for c in preview_cols if c in df_pub.columns]
