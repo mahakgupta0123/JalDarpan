@@ -25,6 +25,47 @@ st.set_page_config(page_title="JalDarpan", page_icon="🌊", layout="wide")
 DEFAULT_BACKEND_URL = os.environ.get("BACKEND_URL", "http://localhost:5000")
 BENCHMARK_CSV = os.environ.get("BENCHMARK_CSV", os.path.join(parent_dir, "benchmark_results.csv"))
 BENCHMARK_CACHE = "research_benchmark_runs.csv"
+RESEARCH_COLORS = ["#0f4c81", "#2b8cbe", "#f28e2b", "#2ca02c", "#d95f02", "#6a3d9a"]
+NATIONAL_FIGURE_DIR = os.path.join(parent_dir, "aggregation_outputs", "research_figures")
+
+INDIA_STATE_CENTROIDS = {
+    "andhra pradesh": (16.50, 80.64),
+    "arunachal pradesh": (27.10, 93.62),
+    "assam": (26.20, 92.93),
+    "bihar": (25.59, 85.13),
+    "chhattisgarh": (21.25, 81.63),
+    "goa": (15.49, 73.83),
+    "gujarat": (23.02, 72.57),
+    "haryana": (29.06, 76.09),
+    "himachal pradesh": (31.10, 77.17),
+    "jharkhand": (23.34, 85.31),
+    "karnataka": (12.97, 77.59),
+    "kerala": (8.52, 76.94),
+    "madhya pradesh": (23.26, 77.41),
+    "maharashtra": (19.08, 72.88),
+    "manipur": (24.82, 93.94),
+    "meghalaya": (25.57, 91.88),
+    "mizoram": (23.73, 92.72),
+    "nagaland": (25.67, 94.11),
+    "odisha": (20.27, 85.84),
+    "punjab": (31.63, 74.87),
+    "rajasthan": (26.91, 75.79),
+    "sikkim": (27.33, 88.61),
+    "tamil nadu": (13.08, 80.27),
+    "telangana": (17.38, 78.49),
+    "tripura": (23.83, 91.29),
+    "uttar pradesh": (26.85, 80.95),
+    "uttarakhand": (30.32, 78.03),
+    "west bengal": (22.57, 88.36),
+    "andaman and nicobar islands": (11.67, 92.73),
+    "chandigarh": (30.74, 76.79),
+    "dadra and nagar haveli and daman and diu": (20.40, 72.95),
+    "delhi": (28.61, 77.21),
+    "jammu and kashmir": (34.08, 74.80),
+    "ladakh": (34.15, 77.58),
+    "lakshadweep": (10.57, 72.64),
+    "puducherry": (11.94, 79.81),
+}
 
 
 def _safe_column(frame, candidates):
@@ -52,7 +93,85 @@ def _format_driver_name(feature_name):
 
 
 def _plotly_chart(fig, key):
-    st.plotly_chart(fig, use_container_width=True, key=key)
+    st.plotly_chart(
+        fig,
+        use_container_width=True,
+        key=key,
+        config={"displayModeBar": False, "displaylogo": False, "responsive": True},
+    )
+
+
+def _save_research_figure(fig, filename_base):
+    try:
+        os.makedirs(NATIONAL_FIGURE_DIR, exist_ok=True)
+        png_path = os.path.join(NATIONAL_FIGURE_DIR, f"{filename_base}.png")
+        html_path = os.path.join(NATIONAL_FIGURE_DIR, f"{filename_base}.html")
+        try:
+            fig.write_image(png_path, scale=2)
+            return png_path
+        except Exception:
+            fig.write_html(html_path, include_plotlyjs="cdn")
+            return html_path
+    except Exception:
+        return None
+
+
+def _state_center(state_name):
+    key = _safe_text(state_name, "").strip().lower()
+    if not key:
+        return None
+    if key in INDIA_STATE_CENTROIDS:
+        return INDIA_STATE_CENTROIDS[key]
+    for known_state, coords in INDIA_STATE_CENTROIDS.items():
+        if known_state in key or key in known_state:
+            return coords
+    return None
+
+
+def apply_research_style(fig, *, title=None, height=420, showlegend=True, x_title=None, y_title=None, tickangle=0, legend_title=None, colorway=None):
+    fig.update_layout(
+        template="plotly_white",
+        height=height,
+        margin=dict(l=24, r=24, t=48, b=24),
+        paper_bgcolor="white",
+        plot_bgcolor="white",
+        font=dict(family="Arial", size=12, color="#10313e"),
+        title=dict(text=title or "", x=0.05, xanchor="left", font=dict(size=18, color="#10313e", family="Arial")),
+        legend=dict(
+            bgcolor="rgba(0,0,0,0)",
+            orientation="h",
+            yanchor="bottom",
+            y=1.02,
+            xanchor="right",
+            x=1.0,
+            font=dict(size=11, color="#10313e"),
+            title_text=legend_title or "",
+        ),
+        hoverlabel=dict(bgcolor="white", font_size=12, font_family="Arial"),
+        colorway=colorway or RESEARCH_COLORS,
+    )
+    if x_title is not None:
+        fig.update_xaxes(title_text=x_title, showgrid=False, zeroline=False, showline=True, linecolor="#d0d7de", ticks="outside", tickfont=dict(size=11, color="#4b5c68"))
+    else:
+        fig.update_xaxes(showgrid=False, zeroline=False, showline=True, linecolor="#d0d7de", ticks="outside", tickfont=dict(size=11, color="#4b5c68"))
+    if y_title is not None:
+        fig.update_yaxes(title_text=y_title, showgrid=True, gridcolor="#e9eff3", zeroline=False, showline=True, linecolor="#d0d7de", ticks="outside", tickfont=dict(size=11, color="#4b5c68"))
+    else:
+        fig.update_yaxes(showgrid=True, gridcolor="#e9eff3", zeroline=False, showline=True, linecolor="#d0d7de", ticks="outside", tickfont=dict(size=11, color="#4b5c68"))
+    if tickangle:
+        fig.update_xaxes(tickangle=tickangle)
+    if not showlegend:
+        fig.update_layout(showlegend=False)
+
+    for trace in fig.data:
+        trace_type = getattr(trace, "type", None)
+        if trace_type == "scattermapbox":
+            continue
+        try:
+            trace.update(marker=dict(line=dict(color="#0f4c81", width=0.7)))
+        except Exception:
+            continue
+    return fig
 
 
 def safe_st_dataframe(frame, **kwargs):
@@ -203,7 +322,6 @@ def fetch_state_choices(backend_url):
     return _fetch_backend_list(backend_url, "states")
 
 
-@st.cache_data(ttl=600, show_spinner=False)
 def fetch_district_choices(backend_url, state):
     if not state:
         return []
@@ -690,13 +808,8 @@ def build_location_map(location_context, featured):
     fig.update_layout(
         mapbox=dict(style="open-street-map", center=dict(lat=center_lat, lon=center_lon), zoom=7),
         margin=dict(l=0, r=0, t=0, b=0),
-        height=500,
-        template="plotly_white",
-        paper_bgcolor="white",
-        plot_bgcolor="white",
-        font=dict(color="#10313e"),
     )
-    return fig
+    return apply_research_style(fig, title="Geographical view", height=500, showlegend=False)
 
 
 def build_anomaly_chart(featured):
@@ -721,15 +834,358 @@ def build_anomaly_chart(featured):
                 marker=dict(color="#d62728", size=8, symbol="x"),
             )
         )
-    fig.update_layout(
-        height=380,
-        template="plotly_white",
-        margin=dict(l=20, r=20, t=30, b=20),
-        paper_bgcolor="white",
-        plot_bgcolor="white",
-        font=dict(color="#10313e"),
+    return apply_research_style(fig, title="Anomaly score over time", height=380, x_title="Time", y_title="Anomaly score")
+
+
+def build_forecast_figure(featured, forecast_df):
+    fig = go.Figure()
+    fig.add_trace(
+        go.Scatter(
+            x=featured.index,
+            y=featured["groundwater_level"],
+            name="Actual",
+            line=dict(color="#2166ac", width=2.5),
+        )
     )
-    return fig
+    fig.add_trace(
+        go.Scatter(
+            x=forecast_df.index,
+            y=forecast_df["forecast"],
+            name="Predicted",
+            line=dict(color="#b2182b", width=3, dash="dash"),
+        )
+    )
+    fig.add_trace(
+        go.Scatter(
+            x=forecast_df.index.tolist() + forecast_df.index[::-1].tolist(),
+            y=forecast_df["upper"].tolist() + forecast_df["lower"][::-1].tolist(),
+            fill="toself",
+            fillcolor="rgba(178, 24, 43, 0.14)",
+            line=dict(color="rgba(255,255,255,0)"),
+            name="Uncertainty band",
+            hoverinfo="skip",
+        )
+    )
+    return apply_research_style(
+        fig,
+        title="Actual vs predicted groundwater level",
+        height=500,
+        x_title="Time",
+        y_title="Groundwater level",
+    )
+
+
+def build_national_metric_figure(df_pub):
+    metrics_left = ["RMSE (mean)", "MAE (mean)", "NRMSE (mean)", "MAPE (mean)"]
+    metrics_right = ["R2 (mean)", "mNSE (mean)", "KGE (mean)"]
+    fig = make_subplots(
+        rows=1,
+        cols=2,
+        subplot_titles=("Error metrics", "Skill metrics"),
+        horizontal_spacing=0.12,
+    )
+    if df_pub is None or df_pub.empty:
+        return _build_placeholder_heatmap(
+            "Model performance figures unavailable",
+            "No publication table was found in the aggregation outputs.",
+        )
+
+    metric_groups = [metrics_left, metrics_right]
+    subplot_columns = [1, 2]
+    for col_idx, metric_group in zip(subplot_columns, metric_groups):
+        for metric_idx, metric in enumerate(metric_group):
+            if metric not in df_pub.columns:
+                continue
+            fig.add_trace(
+                go.Bar(
+                    x=df_pub["Model"] if "Model" in df_pub.columns else [f"Model {idx}" for idx in range(len(df_pub))],
+                    y=df_pub[metric],
+                    name=metric,
+                    marker_color=RESEARCH_COLORS[metric_idx % len(RESEARCH_COLORS)],
+                    opacity=0.92,
+                ),
+                row=1,
+                col=col_idx,
+            )
+
+    fig.update_layout(barmode="group")
+
+    return apply_research_style(
+        fig,
+        title="National model performance comparison",
+        height=470,
+        x_title="Model",
+        y_title="Score",
+    )
+
+
+def build_national_anomaly_map(df_anom_state):
+    if df_anom_state is None or df_anom_state.empty:
+        return _build_placeholder_heatmap(
+            "India anomaly map unavailable",
+            "No state-level anomaly density file was found.",
+        )
+
+    df_map = df_anom_state.copy()
+    state_col = _safe_column(df_map, ["state", "State", "STATE"])
+    density_col = _safe_column(df_map, ["IF__anomaly_density", "anomaly_mean", "anomaly_density"])
+    if state_col is None or density_col is None:
+        return _build_placeholder_heatmap(
+            "India anomaly map unavailable",
+            "State or anomaly density columns were missing.",
+        )
+
+    points = []
+    for _, row in df_map.iterrows():
+        center = _state_center(row[state_col])
+        if center is None:
+            continue
+        density = pd.to_numeric(pd.Series([row[density_col]]), errors="coerce").iloc[0]
+        if pd.isna(density):
+            continue
+        points.append(
+            {
+                "state": row[state_col],
+                "lat": center[0],
+                "lon": center[1],
+                "density": float(density),
+            }
+        )
+
+    if not points:
+        return _build_placeholder_heatmap(
+            "India anomaly map unavailable",
+            "No states matched the built-in India centroid lookup.",
+        )
+
+    df_points = pd.DataFrame(points).sort_values("density", ascending=False)
+    max_density = float(df_points["density"].max()) if len(df_points) else 1.0
+    size_scale = 14 if max_density <= 0 else 18 + 28 * (df_points["density"] / max_density)
+
+    fig = go.Figure()
+    fig.add_trace(
+        go.Scattergeo(
+            lon=df_points["lon"],
+            lat=df_points["lat"],
+            text=df_points["state"],
+            customdata=np.array(df_points[["density"]]),
+            mode="markers+text",
+            textposition="top center",
+            marker=dict(
+                size=size_scale,
+                color=df_points["density"],
+                colorscale="YlOrRd",
+                cmin=float(df_points["density"].min()),
+                cmax=float(df_points["density"].max()),
+                line=dict(color="#1f2933", width=0.7),
+                opacity=0.92,
+                colorbar=dict(title="Anomaly density"),
+            ),
+            hovertemplate="%{text}<br>Anomaly density: %{customdata[0]:.3f}<extra></extra>",
+            name="State anomaly density",
+        )
+    )
+    fig.update_geos(
+        scope="asia",
+        showcountries=True,
+        countrycolor="#c8d2da",
+        showland=True,
+        landcolor="#f5f8fb",
+        showocean=True,
+        oceancolor="#eaf3f9",
+        showlakes=True,
+        lakecolor="#eaf3f9",
+        center=dict(lat=22.5, lon=80.5),
+        fitbounds="locations",
+        projection_type="equirectangular",
+        lataxis=dict(range=[6, 38]),
+        lonaxis=dict(range=[67, 98]),
+    )
+    return apply_research_style(
+        fig,
+        title="India anomaly density map",
+        height=560,
+        showlegend=False,
+    )
+
+
+def build_national_anomaly_bar(df_anom_state):
+    if df_anom_state is None or df_anom_state.empty:
+        return _build_placeholder_heatmap(
+            "Anomalous states figure unavailable",
+            "No state-level anomaly density file was found.",
+        )
+    state_col = _safe_column(df_anom_state, ["state", "State", "STATE"])
+    density_col = _safe_column(df_anom_state, ["IF__anomaly_density", "anomaly_mean", "anomaly_density"])
+    if state_col is None or density_col is None:
+        return _build_placeholder_heatmap(
+            "Anomalous states figure unavailable",
+            "State or anomaly density columns were missing.",
+        )
+    summary = (
+        df_anom_state[[state_col, density_col]]
+        .assign(**{density_col: pd.to_numeric(df_anom_state[density_col], errors="coerce")})
+        .dropna()
+        .sort_values(density_col, ascending=False)
+    )
+    fig = go.Figure()
+    fig.add_trace(
+        go.Bar(
+            x=summary[state_col],
+            y=summary[density_col],
+            marker=dict(
+                color=summary[density_col],
+                colorscale="YlOrRd",
+                line=dict(color="#1f2933", width=0.4),
+            ),
+            text=summary[density_col].map(lambda value: f"{value:.3f}"),
+            textposition="outside",
+            name="Anomaly density",
+        )
+    )
+    fig.update_xaxes(tickangle=-35)
+    return apply_research_style(
+        fig,
+        title="Most anomalous states",
+        height=420,
+        x_title="State",
+        y_title="Anomaly density",
+        showlegend=False,
+    )
+
+
+def build_national_shap_bar(df_clean, model="XGBoost", top_n=15):
+    shap_prefix = f"SHAP__{model}__"
+    shap_cols = [col for col in df_clean.columns if isinstance(col, str) and col.startswith(shap_prefix) and "top" not in col]
+    if not shap_cols:
+        return _build_placeholder_heatmap(
+            f"{model} SHAP barplot unavailable",
+            "No SHAP contribution columns were found in the national aggregation dataset.",
+        )
+
+    rows = pd.to_numeric(df_clean.get("rows", pd.Series(1, index=df_clean.index)), errors="coerce").fillna(1.0)
+    feature_scores = []
+    for col in shap_cols:
+        feature_name = col.replace(shap_prefix, "")
+        values = pd.to_numeric(df_clean[col], errors="coerce")
+        valid = values.notna()
+        if not valid.any():
+            continue
+        mean_abs = np.average(np.abs(values[valid]), weights=rows[valid])
+        feature_scores.append((feature_name, float(mean_abs)))
+
+    if not feature_scores:
+        return _build_placeholder_heatmap(
+            f"{model} SHAP barplot unavailable",
+            "No valid SHAP values were available for aggregation.",
+        )
+
+    summary = pd.DataFrame(feature_scores, columns=["Feature", "MeanAbsSHAP"])
+    summary = summary.sort_values("MeanAbsSHAP", ascending=True).tail(top_n)
+    fig = go.Figure(
+        go.Bar(
+            x=summary["MeanAbsSHAP"],
+            y=summary["Feature"],
+            orientation="h",
+            marker=dict(
+                color=summary["MeanAbsSHAP"],
+                colorscale="Blues",
+                line=dict(color="#1f2933", width=0.5),
+            ),
+            text=summary["MeanAbsSHAP"].map(lambda value: f"{value:.3f}"),
+            textposition="outside",
+            name="Mean |SHAP|",
+        )
+    )
+    return apply_research_style(
+        fig,
+        title=f"National SHAP barplot - {model}",
+        height=500,
+        x_title="Mean absolute SHAP",
+        y_title="Feature",
+        showlegend=False,
+    )
+
+
+def build_national_shap_beeswarm(df_clean, model="XGBoost", top_n=12):
+    shap_prefix = f"SHAP__{model}__"
+    shap_cols = [col for col in df_clean.columns if isinstance(col, str) and col.startswith(shap_prefix) and "top" not in col]
+    if not shap_cols:
+        return _build_placeholder_heatmap(
+            f"{model} SHAP beeswarm unavailable",
+            "No SHAP contribution columns were found in the national aggregation dataset.",
+        )
+
+    rows = pd.to_numeric(df_clean.get("rows", pd.Series(1, index=df_clean.index)), errors="coerce").fillna(1.0)
+    feature_scores = []
+    for col in shap_cols:
+        feature_name = col.replace(shap_prefix, "")
+        values = pd.to_numeric(df_clean[col], errors="coerce")
+        valid = values.notna()
+        if not valid.any():
+            continue
+        mean_abs = np.average(np.abs(values[valid]), weights=rows[valid])
+        feature_scores.append((feature_name, float(mean_abs), values))
+
+    if not feature_scores:
+        return _build_placeholder_heatmap(
+            f"{model} SHAP beeswarm unavailable",
+            "No valid SHAP values were available for aggregation.",
+        )
+
+    feature_scores = sorted(feature_scores, key=lambda item: item[1], reverse=True)[:top_n]
+    fig = go.Figure()
+    color_range = []
+    for rank, (feature_name, _, values) in enumerate(feature_scores):
+        valid_values = pd.to_numeric(values, errors="coerce").dropna()
+        if valid_values.empty:
+            continue
+        jitter = (np.random.RandomState(42 + rank).rand(len(valid_values)) - 0.5) * 0.42
+        y_positions = np.full(len(valid_values), rank) + jitter
+        color_range.extend(valid_values.tolist())
+        marker_kwargs = dict(
+            size=6,
+            color=valid_values,
+            colorscale="RdBu",
+            cmin=-float(np.nanmax(np.abs(valid_values))) if np.isfinite(np.nanmax(np.abs(valid_values))) else None,
+            cmax=float(np.nanmax(np.abs(valid_values))) if np.isfinite(np.nanmax(np.abs(valid_values))) else None,
+            cmid=0,
+            opacity=0.8,
+            showscale=(rank == 0),
+            line=dict(color="rgba(255,255,255,0.25)", width=0.4),
+        )
+        if rank == 0:
+            marker_kwargs["colorbar"] = dict(title="SHAP value")
+        fig.add_trace(
+            go.Scatter(
+                x=valid_values,
+                y=y_positions,
+                mode="markers",
+                name=feature_name,
+                marker=marker_kwargs,
+                hovertemplate=f"{feature_name}<br>SHAP: %{{x:.4f}}<extra></extra>",
+                showlegend=False,
+            )
+        )
+
+    fig.update_yaxes(
+        tickmode="array",
+        tickvals=list(range(len(feature_scores))),
+        ticktext=[item[0] for item in feature_scores],
+        autorange="reversed",
+    )
+    if color_range:
+        limit = float(np.nanmax(np.abs(color_range))) if np.isfinite(np.nanmax(np.abs(color_range))) else None
+        if limit is not None:
+            fig.update_xaxes(range=[-limit, limit])
+    return apply_research_style(
+        fig,
+        title=f"National SHAP beeswarm - {model}",
+        height=540,
+        x_title="SHAP value",
+        y_title="Feature",
+        showlegend=False,
+    )
 
 
 def build_daily_groundwater_heatmap(featured):
@@ -751,16 +1207,8 @@ def build_daily_groundwater_heatmap(featured):
             hovertemplate="Date: %{x}<br>Level: %{z:.2f}<extra></extra>",
         )
     )
-    fig.update_layout(
-        height=260,
-        template="plotly_white",
-        margin=dict(l=20, r=20, t=30, b=20),
-        paper_bgcolor="white",
-        plot_bgcolor="white",
-        font=dict(color="#10313e"),
-    )
     fig.update_xaxes(tickangle=-45)
-    return fig
+    return apply_research_style(fig, title="Daily groundwater level", height=260, x_title="Date", y_title="Groundwater level")
 
 
 def _build_placeholder_heatmap(title, message):
@@ -777,14 +1225,7 @@ def _build_placeholder_heatmap(title, message):
     )
     fig.update_xaxes(visible=False)
     fig.update_yaxes(visible=False)
-    fig.update_layout(
-        height=520,
-        template="plotly_white",
-        margin=dict(l=20, r=20, t=20, b=20),
-        paper_bgcolor="white",
-        plot_bgcolor="white",
-    )
-    return fig
+    return apply_research_style(fig, title=title, height=520, showlegend=False)
 
 
 def build_correlation_heatmap(corr_frame):
@@ -826,15 +1267,7 @@ def build_correlation_heatmap(corr_frame):
             hovertemplate="%{y} × %{x}: %{z:.3f}<extra></extra>",
         )
     )
-    fig.update_layout(
-        height=520,
-        template="plotly_white",
-        margin=dict(l=20, r=20, t=30, b=20),
-        paper_bgcolor="white",
-        plot_bgcolor="white",
-        font=dict(color="#10313e"),
-    )
-    return fig
+    return apply_research_style(fig, title="Engineered feature correlation matrix", height=520, x_title="Feature", y_title="Feature")
 
 
 
@@ -1220,13 +1653,9 @@ def render_pattern_panel(trained, feature_cols):
         )
     metric_fig.update_layout(
         barmode="group",
-        template="plotly_white",
         height=420,
-        margin=dict(l=20, r=20, t=30, b=20),
-        paper_bgcolor="white",
-        plot_bgcolor="white",
-        font=dict(color="#10313e"),
     )
+    metric_fig = apply_research_style(metric_fig, title="Model error metrics", height=420, x_title="Model", y_title="Score")
     _plotly_chart(metric_fig, key="research_metrics_bars")
 
     render_confusion_matrix_panel(trained)
@@ -1289,15 +1718,8 @@ def render_benchmark_panel(trained):
                     name=metric_name,
                 )
             )
-    pooled_fig.update_layout(
-        barmode="group",
-        template="plotly_white",
-        height=420,
-        margin=dict(l=20, r=20, t=30, b=20),
-        paper_bgcolor="white",
-        plot_bgcolor="white",
-        font=dict(color="#10313e"),
-    )
+    pooled_fig.update_layout(barmode="group", height=420)
+    pooled_fig = apply_research_style(pooled_fig, title="Pooled benchmark metrics", height=420, x_title="Model", y_title="Score")
     _plotly_chart(pooled_fig, key="research_pooled_metrics")
 
     st.markdown("### Cumulative confusion matrix (XGBoost)")
@@ -1349,42 +1771,7 @@ def render_forecast_and_anomaly_panel(trained, forecast_df):
     else:
         st.info("Daily groundwater heatmap is not available for this dataset.")
 
-    forecast_fig = go.Figure()
-    forecast_fig.add_trace(
-        go.Scatter(
-            x=trained["featured"].index,
-            y=trained["featured"]["groundwater_level"],
-            name="Historical",
-            line=dict(color="#2c7fb8", width=2),
-        )
-    )
-    forecast_fig.add_trace(
-        go.Scatter(
-            x=forecast_df.index,
-            y=forecast_df["forecast"],
-            name="Forecast",
-            line=dict(color="#f28e2b", width=3, dash="dash"),
-        )
-    )
-    forecast_fig.add_trace(
-        go.Scatter(
-            x=forecast_df.index.tolist() + forecast_df.index[::-1].tolist(),
-            y=forecast_df["upper"].tolist() + forecast_df["lower"][::-1].tolist(),
-            fill="toself",
-            fillcolor="rgba(242, 142, 43, 0.18)",
-            line=dict(color="rgba(255,255,255,0)"),
-            name="Confidence band",
-            hoverinfo="skip",
-        )
-    )
-    forecast_fig.update_layout(
-        height=500,
-        template="plotly_white",
-        margin=dict(l=20, r=20, t=30, b=20),
-        paper_bgcolor="white",
-        plot_bgcolor="white",
-        font=dict(color="#10313e"),
-    )
+    forecast_fig = build_forecast_figure(trained["featured"], forecast_df)
     _plotly_chart(forecast_fig, key="home_forecast_chart")
     safe_st_dataframe(forecast_df, use_container_width=True)
 
@@ -1412,14 +1799,7 @@ def render_confusion_matrix_panel(trained):
             texttemplate="%{text}",
         )
     )
-    heat_fig.update_layout(
-        height=420,
-        template="plotly_white",
-        margin=dict(l=20, r=20, t=30, b=20),
-        paper_bgcolor="white",
-        plot_bgcolor="white",
-        font=dict(color="#10313e"),
-    )
+    heat_fig = apply_research_style(heat_fig, title="Regime confusion matrix", height=420, x_title="Predicted regime", y_title="Actual regime")
     _plotly_chart(heat_fig, key="research_regime_confusion_matrix")
 
     st.dataframe(matrix_df, use_container_width=True)
@@ -1505,7 +1885,7 @@ def render_transparency_explainers(trained, forecast_df, feature_cols, shap_valu
         )
 
 
-def render_national_aggregation_dashboard():
+def render_national_aggregation_dashboard(trained=None, forecast_df=None):
     """Render the national-level aggregation metrics dashboard."""
     import traceback
     
@@ -1560,6 +1940,12 @@ def render_national_aggregation_dashboard():
         if df_excluded is not None:
             st.success(f"✓ Loaded excluded districts ({len(df_excluded)} excluded)")
 
+        # Load cleaned aggregation data for engineered-feature correlation analysis
+        clean_file = os.path.join(output_dir, "cleaned_dataset_used_for_aggregation.csv")
+        df_clean = pd.read_csv(clean_file) if os.path.exists(clean_file) else None
+        if df_clean is not None:
+            st.success(f"✓ Loaded cleaned aggregation dataset ({len(df_clean)} rows)")
+
         # Load national SHAP summaries if present
         def _load_shap_file(path):
             if not os.path.exists(path):
@@ -1586,6 +1972,66 @@ def render_national_aggregation_dashboard():
         if df_shap_xgb is not None:
             st.success(f"✓ Loaded national SHAP importance for XGBoost ({len(df_shap_xgb)} features)")
         
+        st.divider()
+
+        # Engineered feature correlation matrix (national view)
+        st.subheader("🧩 Engineered Feature Correlation Matrix")
+        if df_clean is not None and not df_clean.empty:
+            requested_features = [
+                "lag_1", "lag_3", "lag_7", "lag_14",
+                "rolling_7_mean", "rolling_14_mean",
+                "rolling_7_std", "rolling_14_std",
+                "diff_1", "diff_7",
+                "month", "dayofyear", "weekday", "is_monsoon",
+            ]
+            feature_lookup = {
+                "lag_1": "lag_1",
+                "lag_3": "lag_3",
+                "lag_7": "lag_7",
+                "lag_14": "lag_14",
+                "rolling_7_mean": "rolling_7",
+                "rolling_14_mean": "rolling_14",
+                "rolling_7_std": "rolling_7_std",
+                "rolling_14_std": "rolling_14_std",
+                "diff_1": "diff_1",
+                "diff_7": "diff_7",
+                "month": "month",
+                "dayofyear": "dayofyear",
+                "weekday": "weekday",
+                "is_monsoon": "is_monsoon",
+            }
+
+            feature_cols = []
+            for requested_feature in requested_features:
+                lookup_name = feature_lookup[requested_feature]
+                candidates = [
+                    f"SHAP__Random Forest__{lookup_name}",
+                    f"SHAP__XGBoost__{lookup_name}",
+                    lookup_name,
+                ]
+                for col in candidates:
+                    if col in df_clean.columns:
+                        feature_cols.append(col)
+                        break
+
+            feature_cols = [col for col in feature_cols if col in df_clean.columns]
+            if feature_cols:
+                corr_source = df_clean[feature_cols].copy()
+                corr_source = corr_source.apply(pd.to_numeric, errors="coerce")
+                corr_source = corr_source.dropna(axis=1, how="all")
+                if corr_source.shape[1] >= 2:
+                    corr_frame = corr_source.corr(numeric_only=True).round(2)
+                    corr_fig = build_correlation_heatmap(corr_frame)
+                    _plotly_chart(corr_fig, key="national_engineered_feature_corr")
+                    st.caption("This matrix summarizes the relationships among the 14 engineered features using the feature representations available in the national aggregation dataset.")
+                    st.dataframe(corr_frame, use_container_width=True)
+                else:
+                    st.info("The available aggregation data did not contain enough numeric engineered-feature values to build the matrix.")
+            else:
+                st.info("No engineered feature columns were detected in the available national aggregation dataset.")
+        else:
+            st.info("No cleaned aggregation dataset was found, so the engineered feature correlation matrix could not be generated yet.")
+
         st.divider()
         
         # Display KPI cards
@@ -1651,7 +2097,7 @@ def render_national_aggregation_dashboard():
                             row=1, col=idx
                         )
                 
-                fig.update_layout(height=400, showlegend=True)
+                fig = apply_research_style(fig, title="Performance comparison across metrics", height=400, x_title="Metric", y_title="Score", showlegend=True)
                 _plotly_chart(fig, key="model_comparison")
         
         # NRMSE comparison
@@ -1668,7 +2114,7 @@ def render_national_aggregation_dashboard():
                     error_y=dict(type='data', array=[nrmse_std if pd.notna(nrmse_std) else 0]),
                     name=model
                 ))
-            fig_nrmse.update_layout(title="NRMSE by Model (with std)", height=400, showlegend=False)
+            fig_nrmse = apply_research_style(fig_nrmse, title="Normalized RMSE by model", height=400, x_title="Model", y_title="NRMSE", showlegend=False)
             _plotly_chart(fig_nrmse, key="nrmse_comparison")
         
         # R² comparison
@@ -1685,7 +2131,7 @@ def render_national_aggregation_dashboard():
                     error_y=dict(type='data', array=[r2_std if pd.notna(r2_std) else 0]),
                     name=model
                 ))
-            fig_r2.update_layout(title="R² by Model (with std)", height=400, showlegend=False)
+            fig_r2 = apply_research_style(fig_r2, title="Coefficient of determination by model", height=400, x_title="Model", y_title="R²", showlegend=False)
             _plotly_chart(fig_r2, key="r2_comparison")
         
         # Regime Confusion Matrices (per-model when available)
@@ -1709,7 +2155,7 @@ def render_national_aggregation_dashboard():
                     texttemplate="%{text}",
                     colorscale="Blues"
                 ))
-                fig_cm.update_layout(title="Confusion Matrix (National Totals)", height=400)
+                fig_cm = apply_research_style(fig_cm, title="National confusion matrix", height=400, x_title="Predicted regime", y_title="Actual regime")
                 _plotly_chart(fig_cm, key="confusion_matrix")
                 st.dataframe(pivot_cm, use_container_width=True)
             except Exception as cm_err:
@@ -1717,8 +2163,6 @@ def render_national_aggregation_dashboard():
                 st.dataframe(df_cm, use_container_width=True)
 
         # If a cleaned dataset exists, attempt to compute per-model confusion + accuracy
-        clean_file = os.path.join(output_dir, "cleaned_dataset_used_for_aggregation.csv")
-        df_clean = pd.read_csv(clean_file) if os.path.exists(clean_file) else None
         df_regime_accuracy = None
         df_regime_cm_by_model = None
         if df_clean is not None:
@@ -1793,7 +2237,7 @@ def render_national_aggregation_dashboard():
                 except Exception:
                     pivot = pivot.apply(pd.to_numeric, errors='coerce').fillna(0).astype(int)
                 fig_m = go.Figure(data=go.Heatmap(z=pivot.values, x=pivot.columns, y=pivot.index, colorscale='Blues', text=pivot.values, texttemplate="%{text}"))
-                fig_m.update_layout(height=350, title=f"Confusion: {model}")
+                fig_m = apply_research_style(fig_m, title=f"Confusion matrix: {model}", height=350, x_title="Predicted regime", y_title="Actual regime")
                 _plotly_chart(fig_m, key=f"cm_{model}")
                 st.dataframe(pivot, use_container_width=True)
 
@@ -1840,6 +2284,72 @@ def render_national_aggregation_dashboard():
                 st.markdown("#### XGBoost")
                 st.dataframe(df_shap_xgb.sort_values('mean_abs_shap', ascending=False).head(20), use_container_width=True)
 
+        st.subheader("📚 Publication figures")
+        state_anom_file = os.path.join(output_dir, "anomaly_density_by_state.csv")
+        df_state_anom = pd.read_csv(state_anom_file) if os.path.exists(state_anom_file) else None
+
+        if trained is not None and forecast_df is not None and "featured" in trained:
+            forecast_pub_fig = build_forecast_figure(trained["featured"], forecast_df)
+            _plotly_chart(forecast_pub_fig, key="publication_forecast")
+            forecast_save_path = _save_research_figure(forecast_pub_fig, "publication_forecast_actual_vs_predicted")
+            if forecast_save_path:
+                st.caption(f"Saved locally: {forecast_save_path}")
+        else:
+            st.info("Forecast figure is available only when the current district-level model has already been run.")
+
+        metrics_pub_fig = build_national_metric_figure(df_pub)
+        _plotly_chart(metrics_pub_fig, key="publication_metrics")
+        metrics_save_path = _save_research_figure(metrics_pub_fig, "publication_model_performance")
+        if metrics_save_path:
+            st.caption(f"Saved locally: {metrics_save_path}")
+
+        anomaly_map_fig = build_national_anomaly_map(df_state_anom)
+        _plotly_chart(anomaly_map_fig, key="publication_anomaly_map")
+        anomaly_map_save_path = _save_research_figure(anomaly_map_fig, "publication_india_anomaly_map")
+        if anomaly_map_save_path:
+            st.caption(f"Saved locally: {anomaly_map_save_path}")
+
+        anomaly_bar_fig = build_national_anomaly_bar(df_state_anom)
+        _plotly_chart(anomaly_bar_fig, key="publication_anomalous_states")
+        anomaly_bar_save_path = _save_research_figure(anomaly_bar_fig, "publication_anomalous_states_bar")
+        if anomaly_bar_save_path:
+            st.caption(f"Saved locally: {anomaly_bar_save_path}")
+
+        shap_bar_fig = build_national_shap_bar(df_clean, model="XGBoost")
+        _plotly_chart(shap_bar_fig, key="publication_shap_bar")
+        shap_bar_save_path = _save_research_figure(shap_bar_fig, "publication_xgb_shap_bar")
+        if shap_bar_save_path:
+            st.caption(f"Saved locally: {shap_bar_save_path}")
+
+        shap_bee_fig = build_national_shap_beeswarm(df_clean, model="XGBoost")
+        _plotly_chart(shap_bee_fig, key="publication_shap_beeswarm")
+        shap_bee_save_path = _save_research_figure(shap_bee_fig, "publication_xgb_shap_beeswarm")
+        if shap_bee_save_path:
+            st.caption(f"Saved locally: {shap_bee_save_path}")
+
+        if df_cm is not None and len(df_cm) > 0:
+            try:
+                xgb_pivot = df_cm.pivot_table(index="Actual", columns="Pred", values="Count", fill_value=0)
+                xgb_pivot = xgb_pivot.reindex(index=["Actual Low", "Actual Moderate", "Actual High"], columns=["Pred Low", "Pred Moderate", "Pred High"], fill_value=0)
+                xgb_fig = go.Figure(
+                    data=go.Heatmap(
+                        z=xgb_pivot.values,
+                        x=xgb_pivot.columns.tolist(),
+                        y=xgb_pivot.index.tolist(),
+                        colorscale="Blues",
+                        text=xgb_pivot.values,
+                        texttemplate="%{text}",
+                        hovertemplate="Actual: %{y}<br>Predicted: %{x}<br>Count: %{z}<extra></extra>",
+                    )
+                )
+                xgb_fig = apply_research_style(xgb_fig, title="XGBoost confusion matrix", height=420, x_title="Predicted regime", y_title="Actual regime")
+                _plotly_chart(xgb_fig, key="publication_xgb_cm")
+                xgb_cm_save_path = _save_research_figure(xgb_fig, "publication_xgb_confusion_matrix")
+                if xgb_cm_save_path:
+                    st.caption(f"Saved locally: {xgb_cm_save_path}")
+            except Exception as exc:
+                st.warning(f"Could not render XGBoost confusion matrix figure: {exc}")
+
         # Feature ↔ Metric correlations
         st.subheader("🔗 Feature vs. Metric Correlations")
         if df_corr is None:
@@ -1879,7 +2389,7 @@ def render_national_aggregation_dashboard():
                     total_valid = len(df_rankings.dropna(subset=["rank_1"]))
                     pct = 100 * count / total_valid if total_valid > 0 else 0
                     fig_wins.add_trace(go.Bar(x=[model], y=[count], name=model, text=f"{pct:.1f}%", textposition="auto"))
-                fig_wins.update_layout(title="Districts Where Each Model Ranks #1", height=400, showlegend=False)
+                fig_wins = apply_research_style(fig_wins, title="District-wise model win frequency", height=400, x_title="Model", y_title="District count", showlegend=False)
                 _plotly_chart(fig_wins, key="model_wins")
 
         # IsolationForest / Anomaly density summaries
@@ -1909,7 +2419,7 @@ def render_national_aggregation_dashboard():
                     col = possible_cols[0]
                     fig_ad = go.Figure()
                     fig_ad.add_trace(go.Histogram(x=df_anom[col].dropna(), nbinsx=40))
-                    fig_ad.update_layout(title=f"Distribution of {col}", height=350)
+                    fig_ad = apply_research_style(fig_ad, title=f"Distribution of {col}", height=350, x_title=col, y_title="Count")
                     _plotly_chart(fig_ad, key="anom_hist")
                     st.write("Top anomalous districts")
                     if 'district' in df_anom.columns:
@@ -1928,7 +2438,7 @@ def render_national_aggregation_dashboard():
                             pass
                         st.subheader("Anomaly density by state (mean)")
                         fig_state = go.Figure(go.Bar(x=df_state_anom[state_col], y=df_state_anom['anomaly_mean']))
-                        fig_state.update_layout(height=350)
+                        fig_state = apply_research_style(fig_state, title="Mean anomaly density by state", height=350, x_title="State", y_title="Mean anomaly density")
                         _plotly_chart(fig_state, key="anom_state")
             except Exception as e:
                 st.warning(f"Could not load anomaly data: {e}")
@@ -2106,7 +2616,10 @@ def main():
         district_choices = fetch_district_choices(backend_url, state)
         if district_choices:
             default_district = "Baleshwar" if "Baleshwar" in district_choices else district_choices[0]
-            district = st.selectbox("District", district_choices, index=district_choices.index(default_district))
+            district_key = f"district_{state}"
+            if st.session_state.get(district_key) not in district_choices:
+                st.session_state[district_key] = default_district
+            district = st.selectbox("District", district_choices, key=district_key)
         else:
             st.warning("District list could not be loaded from the backend for the selected state. Using manual entry.")
             district = st.text_input("District", "Baleshwar")
@@ -2262,7 +2775,7 @@ def main():
         with national_tab:
             st.subheader("National-Level Aggregation Metrics")
             st.caption("All India aggregated metrics across models with comparative visualizations.")
-            render_national_aggregation_dashboard()
+            render_national_aggregation_dashboard(trained=trained, forecast_df=forecast_df)
 
         st.success("Dashboard ready: map, heatmaps, explainability, and research validation are available in a simplified layout.")
 

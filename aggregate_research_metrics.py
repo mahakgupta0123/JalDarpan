@@ -621,10 +621,12 @@ def main():
             pct = 100 * count / len(df_ranks.dropna(subset=["rank_1"]))
             print(f"    {model:20s}: {count:4d} districts  ({pct:.1f}%)")
 
-    # FIX 4: Regime accuracy must only be averaged over districts where all
-    # 3 regime classes (Low / Moderate / High) appeared in the test set.
-    # Using all districts inflates accuracy because single-class districts
-    # trivially score 100% by predicting that one class for everything.
+    # FIX 4: Regime accuracy is reported in two different ways:
+    # 1) pooled national accuracy from the summed confusion matrix counts, and
+    # 2) district-weighted mean of per-district regime accuracies.
+    # The pooled version is the publication figure because it matches the
+    # combined national confusion matrix. The district-weighted mean is kept
+    # as a diagnostic so the two aggregation conventions are not confused.
     print("\nSTEP 6b - National regime accuracy")
     df_regime_valid = df_clean[df_clean["regime_valid"] == True].copy()
     n_valid_regime  = len(df_regime_valid)
@@ -635,28 +637,64 @@ def main():
     )
     for model in models:
         acc_col = f"{model}__Regime Accuracy"
+        cm_prefix = f"{model}_cm__"
+        cm_cols = [c for c in df_regime_valid.columns if c.startswith(cm_prefix)]
+
+        pooled_acc = np.nan
+        if cm_cols:
+            cm_df = (
+                df_regime_valid[cm_cols]
+                .apply(lambda s: pd.to_numeric(s, errors="coerce"))
+                .fillna(0)
+                .clip(lower=0)
+            )
+            valid_rows = (cm_df >= 0).all(axis=1)
+            integer_rows = ((cm_df.round() - cm_df).abs() < 1e-6).all(axis=1)
+            valid_rows &= integer_rows
+            if valid_rows.any():
+                cm_counts = cm_df.loc[valid_rows].round().astype(int).sum()
+                diagonal = 0
+                total = int(cm_counts.sum())
+                for actual_label in ["Actual Low", "Actual Moderate", "Actual High"]:
+                    pred_label = actual_label.replace("Actual", "Pred")
+                    pair_col = f"{cm_prefix}{actual_label}__{pred_label}"
+                    if pair_col in cm_counts.index:
+                        diagonal += int(cm_counts[pair_col])
+                pooled_acc = float(diagonal) / float(total) if total > 0 else np.nan
+
+        district_weighted_acc = np.nan
         if acc_col in df_regime_valid.columns:
             df_regime_valid[acc_col] = pd.to_numeric(
                 df_regime_valid[acc_col], errors="coerce"
             )
             valid = df_regime_valid[acc_col].notna()
             if valid.any():
-                weighted_acc = np.average(
+                district_weighted_acc = np.average(
                     df_regime_valid.loc[valid, acc_col],
                     weights=df_regime_valid.loc[valid, "rows"],
                 )
+
+        if pd.notna(pooled_acc):
+            print(
+                f"  {model:20s} National Regime Accuracy (pooled): "
+                f"{pooled_acc * 100:.2f}%  "
+                f"(N={n_valid_regime} valid districts)"
+            )
+            if pd.notna(district_weighted_acc):
                 print(
-                    f"  {model:20s} National Regime Accuracy: "
-                    f"{weighted_acc * 100:.2f}%  "
-                    f"(N={int(valid.sum())} districts)"
+                    f"  {model:20s} District-weighted mean: "
+                    f"{district_weighted_acc * 100:.2f}%  "
+                    f"(diagnostic only)"
                 )
-            else:
-                print(
-                    f"  {model:20s} National Regime Accuracy: no valid values"
-                )
+        elif pd.notna(district_weighted_acc):
+            print(
+                f"  {model:20s} National Regime Accuracy: "
+                f"{district_weighted_acc * 100:.2f}%  "
+                f"(district-weighted diagnostic; pooled confusion counts unavailable)"
+            )
         else:
             print(
-                f"  {model:20s} National Regime Accuracy: column missing"
+                f"  {model:20s} National Regime Accuracy: no valid values"
             )
 
     anomaly_output_file = None
