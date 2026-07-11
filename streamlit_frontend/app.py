@@ -144,18 +144,18 @@ def apply_research_style(fig, *, title=None, height=420, showlegend=True, x_titl
             y=1.02,
             xanchor="right",
             x=1.0,
-            font=dict(size=11, color="#10313e"),
+            font=dict(size=11, color="#000000"),
             title_text=legend_title or "",
         ),
         hoverlabel=dict(bgcolor="white", font_size=12, font_family="Arial"),
         colorway=colorway or RESEARCH_COLORS,
     )
     if x_title is not None:
-        fig.update_xaxes(title_text=x_title, showgrid=False, zeroline=False, showline=True, linecolor="#d0d7de", ticks="outside", tickfont=dict(size=11, color="#4b5c68"))
+        fig.update_xaxes(title_text=x_title, title_font=dict(color="#000000"), showgrid=False, zeroline=False, showline=True, linecolor="#d0d7de", ticks="outside", tickfont=dict(size=11, color="#4b5c68"))
     else:
         fig.update_xaxes(showgrid=False, zeroline=False, showline=True, linecolor="#d0d7de", ticks="outside", tickfont=dict(size=11, color="#4b5c68"))
     if y_title is not None:
-        fig.update_yaxes(title_text=y_title, showgrid=True, gridcolor="#e9eff3", zeroline=False, showline=True, linecolor="#d0d7de", ticks="outside", tickfont=dict(size=11, color="#4b5c68"))
+        fig.update_yaxes(title_text=y_title, title_font=dict(color="#000000"), showgrid=True, gridcolor="#e9eff3", zeroline=False, showline=True, linecolor="#d0d7de", ticks="outside", tickfont=dict(size=11, color="#4b5c68"))
     else:
         fig.update_yaxes(showgrid=True, gridcolor="#e9eff3", zeroline=False, showline=True, linecolor="#d0d7de", ticks="outside", tickfont=dict(size=11, color="#4b5c68"))
     if tickangle:
@@ -546,30 +546,35 @@ def render_dataset_analysis_panel(state, district, featured, trained, forecast_d
     current_summary = build_current_dataset_summary(state, district, featured, trained, forecast_df)
     safe_st_dataframe(current_summary, use_container_width=True)
 
-    if benchmark_aggregates.get("state_summary") is not None and not benchmark_aggregates["state_summary"].empty:
-        st.markdown("### State-level benchmark summary")
-        st.dataframe(
-            benchmark_aggregates["state_summary"].head(12).style.format(
-                {
-                    "avg_mape": "{:.2f}",
-                    "avg_rmse": "{:.3f}",
-                    "avg_nrmse": "{:.3f}",
-                    "regime_valid_pct": "{:.2f}",
-                }
-            ),
-            use_container_width=True,
-        )
-
-    if benchmark_aggregates.get("national_summary") is not None and not benchmark_aggregates["national_summary"].empty:
-        st.markdown("### National pooled benchmark")
-        st.dataframe(benchmark_aggregates["national_summary"].style.format("{:.4f}"), use_container_width=True)
-
     st.markdown("### Feature engineering overview")
     st.write(
         f"- Generated {len(trained['feature_cols'])} engineered features from the cleaned time series."
     )
     st.write("- Normalized the most recent groundwater value relative to the selected district range.")
     st.write("- Used rolling means, rolling standard deviations, lag values, differences, and seasonal encodings.")
+
+
+def render_shap_explanation_panel(feature_cols, shap_values):
+    shap_info = describe_xai_meaning(feature_cols, shap_values)
+    left, right = st.columns([2, 1])
+    with left:
+        st.subheader("SHAP driver plot")
+        shap_importance = pd.Series(np.abs(shap_values).mean(axis=0), index=feature_cols).sort_values(ascending=False).head(10)
+        shap_fig = go.Figure(go.Bar(x=shap_importance.values, y=shap_importance.index, orientation="h"))
+        shap_fig = apply_research_style(
+            shap_fig,
+            title="Top SHAP drivers",
+            height=420,
+            x_title="Mean absolute SHAP value",
+            y_title="Feature",
+            showlegend=False,
+        )
+        _plotly_chart(shap_fig, key="district_shap_chart")
+    with right:
+        st.subheader("Plain-language explanation")
+        st.write(shap_info["summary_text"])
+        st.write(shap_info["plain_language"])
+        st.caption("This explanation sits next to the SHAP chart so users can see both the driver ranking and a simple interpretation together.")
 
 
 def render_alert_tables(runs):
@@ -876,47 +881,98 @@ def build_forecast_figure(featured, forecast_df):
 
 
 def build_national_metric_figure(df_pub):
-    metrics_left = ["RMSE (mean)", "MAE (mean)", "NRMSE (mean)", "MAPE (mean)"]
-    metrics_right = ["R2 (mean)", "mNSE (mean)", "KGE (mean)"]
-    fig = make_subplots(
-        rows=1,
-        cols=2,
-        subplot_titles=("Error metrics", "Skill metrics"),
-        horizontal_spacing=0.12,
-    )
+    preferred_metric_groups = [
+        ["RMSE_mean", "RMSE (mean)", "RMSE mean"],
+        ["MAE_mean", "MAE (mean)", "MAE mean"],
+        ["NRMSE_mean", "NRMSE (mean)", "NRMSE mean"],
+        ["MAPE_mean", "MAPE (mean)", "MAPE mean"],
+    ]
+    preferred_skill_groups = [
+        ["R2_mean", "R2 (mean)", "R2 mean"],
+        ["mNSE_mean", "mNSE (mean)", "mNSE mean"],
+        ["KGE_mean", "KGE (mean)", "KGE mean"],
+    ]
     if df_pub is None or df_pub.empty:
         return _build_placeholder_heatmap(
             "Model performance figures unavailable",
             "No publication table was found in the aggregation outputs.",
         )
 
-    metric_groups = [metrics_left, metrics_right]
-    subplot_columns = [1, 2]
-    for col_idx, metric_group in zip(subplot_columns, metric_groups):
-        for metric_idx, metric in enumerate(metric_group):
-            if metric not in df_pub.columns:
-                continue
-            fig.add_trace(
-                go.Bar(
-                    x=df_pub["Model"] if "Model" in df_pub.columns else [f"Model {idx}" for idx in range(len(df_pub))],
-                    y=df_pub[metric],
-                    name=metric,
-                    marker_color=RESEARCH_COLORS[metric_idx % len(RESEARCH_COLORS)],
-                    opacity=0.92,
-                ),
-                row=1,
-                col=col_idx,
-            )
+    def select_column(candidates):
+        for candidate in candidates:
+            if candidate in df_pub.columns:
+                return candidate
+        return None
+
+    fig = make_subplots(
+        rows=1,
+        cols=2,
+        subplot_titles=("Error metrics", "Skill metrics"),
+        horizontal_spacing=0.12,
+    )
+
+    error_metrics = [select_column(candidates) for candidates in preferred_metric_groups]
+    skill_metrics = [select_column(candidates) for candidates in preferred_skill_groups]
+
+    if not any(error_metrics + skill_metrics):
+        return _build_placeholder_heatmap(
+            "National performance chart unavailable",
+            "The aggregation file does not contain the expected national metric columns.",
+        )
+
+    model_labels = df_pub["Model"] if "Model" in df_pub.columns else [f"Model {idx + 1}" for idx in range(len(df_pub))]
+
+    for idx, metric in enumerate(error_metrics):
+        if metric is None:
+            continue
+        fig.add_trace(
+            go.Bar(
+                x=model_labels,
+                y=df_pub[metric],
+                name=metric.replace("_", " "),
+                marker_color=RESEARCH_COLORS[idx % len(RESEARCH_COLORS)],
+                opacity=0.92,
+            ),
+            row=1,
+            col=1,
+        )
+
+    for idx, metric in enumerate(skill_metrics):
+        if metric is None:
+            continue
+        fig.add_trace(
+            go.Bar(
+                x=model_labels,
+                y=df_pub[metric],
+                name=metric.replace("_", " "),
+                marker_color=RESEARCH_COLORS[(idx + len(error_metrics)) % len(RESEARCH_COLORS)],
+                opacity=0.92,
+            ),
+            row=1,
+            col=2,
+        )
 
     fig.update_layout(barmode="group")
 
-    return apply_research_style(
+    fig = apply_research_style(
         fig,
         title="National model performance comparison",
-        height=470,
+        height=520,
         x_title="Model",
         y_title="Score",
     )
+    fig.update_layout(
+        legend=dict(
+            orientation="h",
+            y=-0.18,
+            x=1.0,
+            xanchor="right",
+            yanchor="top",
+            bgcolor="rgba(0,0,0,0)",
+            font=dict(size=11, color="#000000"),
+        )
+    )
+    return fig
 
 
 def build_national_anomaly_map(df_anom_state):
@@ -928,7 +984,7 @@ def build_national_anomaly_map(df_anom_state):
 
     df_map = df_anom_state.copy()
     state_col = _safe_column(df_map, ["state", "State", "STATE"])
-    density_col = _safe_column(df_map, ["IF__anomaly_density", "anomaly_mean", "anomaly_density"])
+    density_col = _safe_column(df_map, ["IF__anomaly_density", "anomaly_mean", "anomaly_density", "anomaly_density_mean"])
     if state_col is None or density_col is None:
         return _build_placeholder_heatmap(
             "India anomaly map unavailable",
@@ -960,7 +1016,7 @@ def build_national_anomaly_map(df_anom_state):
 
     df_points = pd.DataFrame(points).sort_values("density", ascending=False)
     max_density = float(df_points["density"].max()) if len(df_points) else 1.0
-    size_scale = 14 if max_density <= 0 else 18 + 28 * (df_points["density"] / max_density)
+    size_scale = 10 if max_density <= 0 else 12 + 18 * (df_points["density"] / max_density)
 
     fig = go.Figure()
     fig.add_trace(
@@ -1004,7 +1060,7 @@ def build_national_anomaly_map(df_anom_state):
     return apply_research_style(
         fig,
         title="India anomaly density map",
-        height=560,
+        height=680,
         showlegend=False,
     )
 
@@ -1016,7 +1072,7 @@ def build_national_anomaly_bar(df_anom_state):
             "No state-level anomaly density file was found.",
         )
     state_col = _safe_column(df_anom_state, ["state", "State", "STATE"])
-    density_col = _safe_column(df_anom_state, ["IF__anomaly_density", "anomaly_mean", "anomaly_density"])
+    density_col = _safe_column(df_anom_state, ["IF__anomaly_density", "anomaly_mean", "anomaly_density", "anomaly_density_mean"])
     if state_col is None or density_col is None:
         return _build_placeholder_heatmap(
             "Anomalous states figure unavailable",
@@ -1296,13 +1352,13 @@ def train_models(featured, feature_cols):
     rf_pred = rf.predict(X_test)
 
     xgb = XGBRegressor(
-        n_estimators=350,
-        learning_rate=0.04,
+        n_estimators=600,
+        learning_rate=0.03,
         max_depth=5,
-        subsample=0.85,
-        colsample_bytree=0.85,
+        subsample=0.9,
+        colsample_bytree=0.9,
         reg_alpha=0.1,
-        reg_lambda=1.0,
+        reg_lambda=1.5,
         random_state=42,
         objective="reg:squarederror",
         n_jobs=-1,
@@ -1608,6 +1664,116 @@ def describe_xai_meaning(feature_cols, shap_values):
     }
 
 
+def load_local_district_reference():
+    ref_path = os.path.join(parent_dir, "aggregation_outputs", "cleaned_dataset_used_for_aggregation.csv")
+    if not os.path.exists(ref_path):
+        return pd.DataFrame()
+
+    frame = pd.read_csv(ref_path)
+    if frame.empty:
+        return frame
+
+    for column in ["state", "district"]:
+        if column in frame.columns:
+            frame[column] = frame[column].fillna("").astype(str).str.strip()
+            frame[f"{column}_norm"] = frame[column].str.lower()
+
+    # Deduplicate by district so the top-10 tables show unique districts only.
+    if "state" in frame.columns and "district" in frame.columns:
+        numeric_cols = {
+            "IF__anomaly_density": "max",
+            "IF__anomaly_count": "max",
+            "gwl_min": "min",
+            "gwl_max": "max",
+        }
+        agg_cols = {col: func for col, func in numeric_cols.items() if col in frame.columns}
+        if agg_cols:
+            frame = frame.groupby(["state", "district"], as_index=False).agg(agg_cols)
+    return frame
+
+
+def render_district_level_home_tab(state, district, featured, forecast_df, trained, location_context, shap_values, feature_cols):
+    latest_level = float(featured["groundwater_level"].iloc[-1]) if not featured.empty else np.nan
+    recent_window = featured["groundwater_level"].tail(min(14, len(featured))) if not featured.empty else pd.Series(dtype=float)
+    recent_change = float(recent_window.iloc[-1] - recent_window.iloc[0]) if len(recent_window) > 1 else 0.0
+    forecasted_level = float(forecast_df["forecast"].iloc[0]) if forecast_df is not None and not forecast_df.empty else np.nan
+    anomaly_density_pct = float(featured["anomaly_flag"].mean() * 100) if not featured.empty else np.nan
+    st.caption("This view emphasizes the current district state, the short-term forecast, and the local district context. The district rankings below are sourced from the local aggregation cache for a broader comparison.")
+
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        st.metric("Current groundwater level", f"{latest_level:.2f}", delta=f"{recent_change:.2f} over recent window")
+    with col2:
+        st.metric("Forecasted level", f"{forecasted_level:.2f}", delta=f"{forecasted_level - latest_level:.2f} vs current")
+    with col3:
+        st.metric("Anomaly density", f"{anomaly_density_pct:.2f}%", delta="flagged readings")
+
+    st.divider()
+
+    map_col, heatmap_col = st.columns(2)
+    with map_col:
+        st.subheader("Location map")
+        if location_context is None:
+            st.info("No coordinates were found for this district, so the map panel falls back to the available district-level context.")
+        else:
+            map_fig = build_location_map(location_context, featured)
+            if map_fig is not None:
+                _plotly_chart(map_fig, key="district_home_map")
+            else:
+                st.info("A map could not be generated for the current selection.")
+
+    with heatmap_col:
+        st.subheader("Groundwater heatmap")
+        heatmap_fig = build_daily_groundwater_heatmap(featured)
+        if heatmap_fig is not None:
+            _plotly_chart(heatmap_fig, key="district_home_heatmap")
+        else:
+            st.info("A groundwater heatmap is not available for this district yet.")
+
+    st.divider()
+
+    chart_col1, chart_col2 = st.columns(2)
+    with chart_col1:
+        st.subheader("Actual vs forecasted level")
+        forecast_fig = build_forecast_figure(featured, forecast_df)
+        _plotly_chart(forecast_fig, key="district_forecast_chart")
+    with chart_col2:
+        st.subheader("Anomaly detection")
+        anomaly_fig = build_anomaly_chart(featured)
+        _plotly_chart(anomaly_fig, key="district_anomaly_chart")
+
+    st.divider()
+
+    local_reference = load_local_district_reference()
+    district_lists_col, district_low_col = st.columns(2)
+    with district_lists_col:
+        st.subheader("Top 10 anomalous districts")
+        if local_reference.empty:
+            st.info("Local district reference data is not available yet.")
+        else:
+            ranked = local_reference[["state", "district", "IF__anomaly_density", "IF__anomaly_count", "gwl_min"]].copy()
+            ranked = ranked.dropna(subset=["IF__anomaly_density"])
+            if ranked.empty:
+                st.info("No district anomaly data is available in the local reference set.")
+            else:
+                ranked["anomaly_density_pct"] = ranked["IF__anomaly_density"] * 100
+                ranked = ranked.sort_values(["anomaly_density_pct", "IF__anomaly_count"], ascending=[False, False]).head(10)
+                st.dataframe(ranked[["state", "district", "anomaly_density_pct", "IF__anomaly_count", "gwl_min"]], use_container_width=True, hide_index=True)
+
+    with district_low_col:
+        st.subheader("Top 10 lowest groundwater districts")
+        if local_reference.empty:
+            st.info("Local district reference data is not available yet.")
+        else:
+            lowest = local_reference[["state", "district", "gwl_min", "gwl_max", "IF__anomaly_density"]].copy()
+            lowest = lowest.dropna(subset=["gwl_min"])
+            if lowest.empty:
+                st.info("No groundwater range data is available in the local reference set.")
+            else:
+                lowest = lowest.sort_values(["gwl_min", "IF__anomaly_density"], ascending=[True, False]).head(10)
+                st.dataframe(lowest[["state", "district", "gwl_min", "gwl_max", "IF__anomaly_density"]], use_container_width=True, hide_index=True)
+
+
 def render_map_panel(location_context, featured):
     st.subheader("Geographical view")
     if location_context is None:
@@ -1631,6 +1797,23 @@ def render_map_panel(location_context, featured):
         unsafe_allow_html=True,
     )
 
+    # Ensure Streamlit metric card labels and values are readable (force black text)
+    st.markdown(
+        """
+        <style>
+            [data-testid="stMetricLabel"] {
+                color: #000000 !important;
+            }
+            [data-testid="stMetricValue"] {
+                color: #000000 !important;
+            }
+            [data-testid="stMetric"] {
+                color: #000000 !important;
+            }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
 
 def render_pattern_panel(trained, feature_cols):
     st.subheader("Patterns and validation")
@@ -1657,106 +1840,6 @@ def render_pattern_panel(trained, feature_cols):
     )
     metric_fig = apply_research_style(metric_fig, title="Model error metrics", height=420, x_title="Model", y_title="Score")
     _plotly_chart(metric_fig, key="research_metrics_bars")
-
-    render_confusion_matrix_panel(trained)
-
-
-def render_benchmark_panel(trained):
-    benchmark = build_benchmark_summary(exclude_latest=True)
-    st.subheader("Cumulative research benchmark")
-
-    if benchmark is None or benchmark["summary"].empty:
-        st.info("No benchmark runs available yet. Run `python run_benchmark_sweep.py` from the project root to populate the national benchmark, or navigate to Settings > Run analysis to record manual runs here.")
-        return
-
-    runs = benchmark["runs"]
-    valid_run_count = (runs.get("regime_valid", False).sum() if "regime_valid" in runs.columns else 0)
-    total_run_count = len(runs)
-    
-    validity_note = get_regime_validity_note(valid_run_count, total_run_count)
-    st.caption(f"Pooled over {total_run_count} prior runs. {validity_note}")
-    
-    # --- Per-District Table ---
-    st.markdown("### Per-district results")
-    
-    # Select display columns
-    display_cols = ["state", "district", "split_ratio", "regime_valid", "train_rows", "test_rows", "anomaly_rate_pct"]
-    
-    # Add model summary metrics (RMSE, MAE, MAPE from XGBoost)
-    for metric in ["RMSE", "MAE", "MAPE"]:
-        col_name = f"XGBoost__{metric}"
-        if col_name in runs.columns:
-            display_cols.append(col_name)
-    
-    display_df = runs[display_cols].copy() if all(col in runs.columns for col in display_cols) else runs
-    
-    st.dataframe(
-        display_df.style.format({
-            "split_ratio": "{:.0%}",
-            "anomaly_rate_pct": "{:.1f}%",
-            "XGBoost__RMSE": "{:.3f}",
-            "XGBoost__MAE": "{:.3f}",
-            "XGBoost__MAPE": "{:.1f}",
-        }),
-        use_container_width=True,
-        height=400,
-    )
-    st.caption("split_ratio: train/test ratio used (80/20 preferred, falling back to 75/25 or 70/30 if 80/20 didn't yield 3 regime classes). regime_valid: whether all 3 regime classes appeared in test set. anomaly_rate_pct: % of observations flagged as anomalous by Isolation Forest.")
-    
-    # --- Aggregated Metrics ---
-    st.markdown("### Pooled national summary")
-    st.dataframe(benchmark["summary"].style.format("{:.4f}"), use_container_width=True)
-
-    # --- Metrics Bars ---
-    pooled_fig = go.Figure()
-    for metric_name in ["RMSE", "MAE", "MAPE"]:
-        if metric_name in benchmark["summary"].columns:
-            pooled_fig.add_trace(
-                go.Bar(
-                    x=benchmark["summary"].index,
-                    y=benchmark["summary"][metric_name],
-                    name=metric_name,
-                )
-            )
-    pooled_fig.update_layout(barmode="group", height=420)
-    pooled_fig = apply_research_style(pooled_fig, title="Pooled benchmark metrics", height=420, x_title="Model", y_title="Score")
-    _plotly_chart(pooled_fig, key="research_pooled_metrics")
-
-    st.markdown("### Cumulative confusion matrix (XGBoost)")
-    if not benchmark["xgb_cm"].empty:
-        st.dataframe(benchmark["xgb_cm"].astype(str), use_container_width=True)
-    else:
-        st.info("Cumulative confusion matrix data is unavailable.")
-    st.info(validity_note)
-
-
-def render_research_protocol(trained, feature_cols, shap_values):
-    st.subheader("Research protocol")
-    protocol_cols = st.columns(3)
-    protocol_cols[0].metric("Train/Test split", "80/20")
-    protocol_cols[1].metric("Target", "Groundwater level")
-    protocol_cols[2].metric("Primary model", "XGBoost")
-
-    st.markdown(
-        """
-        The current-run metrics are computed only on the selected dataset and use a chronological hold-out test period. This is standard forecasting evaluation: train on earlier observations, test on later unseen observations, and compare predictions against the actual test values. The numbers can differ across states or districts because each area has a different groundwater regime, sample length, seasonal structure, and variance. The pooled benchmark below is only a historical comparison across saved runs.
-        """
-    )
-    st.markdown("- RMSE measures absolute forecast error in the original groundwater units.")
-    st.markdown("- MAE measures the average absolute deviation and is easier to read than RMSE.")
-    st.markdown("- MAPE reports percentage error, which helps compare across datasets with different scales.")
-    st.markdown("- R2, NSE, and KGE are standard hydrology/forecasting skill measures for fit and efficiency.")
-    st.markdown("- NRMSE normalizes the RMSE by the observed range so results can be compared across districts.")
-    st.markdown("- PBIAS and Bias show whether the model systematically overpredicts or underpredicts.")
-    st.markdown("- Pearson r shows whether the predicted and actual series move together.")
-    st.markdown("- Regime accuracy and confusion matrices convert the continuous series into Low / Moderate / High classes using train-set quantiles.")
-    st.markdown("- SHAP explains which engineered lags, rolling values, and seasonal variables changed the model output.")
-    st.info(trained.get("regime_eval_note", ""))
-
-    st.markdown("### Current dataset scorecard")
-    st.dataframe(trained["metrics"].style.format("{:.4f}"), use_container_width=True)
-
-    st.caption("Current-run metrics are the main research result. Historical pooled metrics are shown separately so the two do not get mixed together. This prevents a district-specific score from being mistaken for a cross-district benchmark.")
 
 
 def render_forecast_and_anomaly_panel(trained, forecast_df):
@@ -1814,722 +1897,252 @@ def render_confusion_matrix_panel(trained):
     st.caption(trained.get("regime_eval_note", ""))
 
 
-def render_plain_language_panels(trained, forecast_df, feature_cols, shap_values):
-    groundwater_story = describe_groundwater_status(trained["featured"], forecast_df)
-    xai_story = describe_xai_meaning(feature_cols, shap_values)
-    next_forecast_display = f"{groundwater_story['next_forecast']:.2f}" if np.isfinite(groundwater_story["next_forecast"]) else "N/A"
-
-    st.subheader("Plain-language groundwater status")
-    st.markdown(
-        f"""
-        <div style="padding:1rem 1.1rem;border-radius:16px;background:#ffffff;border:1px solid #dfe8ec;color:#10313e;">
-            <p style="margin:0 0 0.35rem 0;font-weight:700;font-size:1.05rem;">Current status: {groundwater_story['status_label']}</p>
-            <p style="margin:0 0 0.35rem 0;">Latest observed level: {groundwater_story['latest_level']:.2f}</p>
-            <p style="margin:0 0 0.35rem 0;">Recent change over the last 14 observations: {groundwater_story['recent_change']:+.2f}</p>
-            <p style="margin:0 0 0.35rem 0;">Next forecasted level: {next_forecast_display}</p>
-            <p style="margin:0 0 0.35rem 0;">Anomaly rate: {groundwater_story['anomaly_rate']:.1f}%</p>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
-    st.info(groundwater_story["trend_text"])
-    st.info(groundwater_story["forecast_text"])
-    st.info(groundwater_story["anomaly_text"])
-
-    st.subheader("Plain-language XAI meaning")
-    st.markdown(
-        f"""
-        <div style="padding:1rem 1.1rem;border-radius:16px;background:#ffffff;border:1px solid #dfe8ec;color:#10313e;">
-            <p style="margin:0 0 0.35rem 0;font-weight:700;font-size:1.05rem;">What SHAP is saying</p>
-            <p style="margin:0;">{xai_story['summary_text']}</p>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
-    st.write(xai_story["plain_language"])
-    st.dataframe(xai_story["top_features"].rename("mean_abs_shap").to_frame(), use_container_width=True)
-
-
-def render_transparency_explainers(trained, forecast_df, feature_cols, shap_values):
-    with st.expander("How to read this dashboard", expanded=True):
-        st.markdown(
-            """
-            This dashboard follows a research-style flow: raw groundwater values are cleaned first, then transformed into lag and rolling features, then evaluated with a train/test split, and finally interpreted with SHAP. The figures are chosen so a non-technical user can follow the logic without reading code.
-            """
-        )
-        st.markdown("- Correlation matrix: shows whether engineered inputs move together or overlap.")
-        st.markdown("- Confusion matrix: converts continuous groundwater into Low / Moderate / High regime classes so the model can be checked in a policy-friendly way.")
-        st.markdown("- SHAP bar plot: ranks the strongest drivers of the forecast.")
-        st.markdown("- Forecast plot: shows short-term projection and uncertainty band.")
-        st.markdown("- Anomaly chart: highlights unusual readings that should be reviewed before using the results.")
-
-    with st.expander("Why these models are used", expanded=False):
-        st.markdown(
-            """
-            Random Forest and XGBoost are included because they handle nonlinear time-series interactions well. Isolation Forest is used for anomaly detection because it can identify unusual patterns without requiring manual labels for every abnormal reading. The baseline persistence model provides a simple reference point so the research comparison remains defensible.
-            """
-        )
-
-    with st.expander("What SHAP means here", expanded=False):
-        st.markdown(
-            """
-            SHAP is a transparency layer. A positive SHAP value pushes the model toward a deeper groundwater prediction; a negative value pulls it toward a shallower prediction. The goal is not just to predict, but to explain which recent readings and seasonal signals changed the output.
-            """
-        )
-
-    with st.expander("How anomaly and forecasting should be read", expanded=False):
-        st.markdown(
-            """
-            Anomaly detection marks readings that are different from the learned normal pattern. Forecasting gives the likely next movement based on the recent sequence. They answer different questions: anomaly detection asks whether a point is unusual, while forecasting asks where the series is likely to go next.
-            """
-        )
-
-
-def render_national_aggregation_dashboard(trained=None, forecast_df=None):
-    """Render the national-level aggregation metrics dashboard."""
-    import traceback
-    
+def _load_shap_importance(path):
+    if not os.path.exists(path):
+        return None
     try:
-        # Try to find the aggregation_outputs directory
-        parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-        output_dir = os.path.join(parent_dir, "aggregation_outputs")
-        
-        st.info(f"📂 Looking for data in: `{output_dir}`")
-        
-        if not os.path.exists(output_dir):
-            st.error(f"❌ Directory not found: {output_dir}\n\nPlease run the aggregation script first:\n```bash\ncd {os.path.dirname(parent_dir)}\npython aggregate_research_metrics.py\n```")
-            return
-        
-        st.success(f"✓ Found aggregation directory")
-        
-        # Load national-level metrics
-        national_file = os.path.join(output_dir, "national_level_aggregation.csv")
-        if not os.path.exists(national_file):
-            st.error(f"❌ File not found: national_level_aggregation.csv")
-            return
-        df_national = pd.read_csv(national_file)
-        st.success(f"✓ Loaded national metrics ({len(df_national)} rows)")
-        
-        # Load publication table
-        pub_file = os.path.join(output_dir, "publication_national_table.csv")
-        df_pub = pd.read_csv(pub_file) if os.path.exists(pub_file) else None
-        if df_pub is not None:
-            st.success(f"✓ Loaded publication table ({len(df_pub)} models)")
-        
-        # Load confusion matrix
-        cm_file = os.path.join(output_dir, "xgb_confusion_matrix_summary.csv")
-        df_cm = pd.read_csv(cm_file) if os.path.exists(cm_file) else None
-        if df_cm is not None:
-            st.success(f"✓ Loaded confusion matrix ({len(df_cm)} entries)")
-        
-        # Load feature <-> metric correlations if present
-        corr_file = os.path.join(output_dir, "feature_metric_correlations.csv")
-        df_corr = pd.read_csv(corr_file) if os.path.exists(corr_file) else None
-        if df_corr is not None:
-            st.success(f"✓ Loaded feature-metric correlations ({len(df_corr)} rows)")
-        
-        # Load district rankings
-        rankings_file = os.path.join(output_dir, "district_model_rankings.csv")
-        df_rankings = pd.read_csv(rankings_file) if os.path.exists(rankings_file) else None
-        if df_rankings is not None:
-            st.success(f"✓ Loaded district rankings ({len(df_rankings)} districts)")
-        
-        # Load excluded districts
-        excluded_file = os.path.join(output_dir, "excluded_districts.csv")
-        df_excluded = pd.read_csv(excluded_file) if os.path.exists(excluded_file) else None
-        if df_excluded is not None:
-            st.success(f"✓ Loaded excluded districts ({len(df_excluded)} excluded)")
+        df = pd.read_csv(path)
+    except Exception:
+        return None
+    if "Unnamed: 0" in df.columns:
+        df = df.rename(columns={"Unnamed: 0": "feature"})
+    if "feature" not in df.columns and df.shape[1] >= 2:
+        df.columns = ["feature", "mean_abs_shap"] + list(df.columns[2:])
+    return df[["feature", "mean_abs_shap"]].dropna(subset=["feature"]).head(30)
 
-        # Load cleaned aggregation data for engineered-feature correlation analysis
-        clean_file = os.path.join(output_dir, "cleaned_dataset_used_for_aggregation.csv")
-        df_clean = pd.read_csv(clean_file) if os.path.exists(clean_file) else None
-        if df_clean is not None:
-            st.success(f"✓ Loaded cleaned aggregation dataset ({len(df_clean)} rows)")
 
-        # Load national SHAP summaries if present
-        def _load_shap_file(path):
-            if not os.path.exists(path):
-                return None
-            try:
-                df = pd.read_csv(path, index_col=0)
-            except Exception:
-                try:
-                    df = pd.read_csv(path)
-                except Exception:
-                    return None
-            if df.index.name is not None:
-                df = df.reset_index().rename(columns={df.columns[0]: "Feature"})
-            elif "Unnamed: 0" in df.columns:
-                df = df.rename(columns={"Unnamed: 0": "Feature"})
-            return df
+def render_state_level_dashboard():
+    output_dir = os.path.join(parent_dir, "aggregation_outputs")
+    state_file = os.path.join(output_dir, "state_level_aggregation.csv")
+    anomaly_file = os.path.join(output_dir, "anomaly_density_by_state.csv")
+    shap_rf_file = os.path.join(output_dir, "shap_national_Random_Forest.csv")
+    shap_xgb_file = os.path.join(output_dir, "shap_national_XGBoost.csv")
 
-        shap_rf_file = os.path.join(output_dir, "shap_national_Random_Forest.csv")
-        shap_xgb_file = os.path.join(output_dir, "shap_national_XGBoost.csv")
-        df_shap_rf = _load_shap_file(shap_rf_file)
-        df_shap_xgb = _load_shap_file(shap_xgb_file)
-        if df_shap_rf is not None:
-            st.success(f"✓ Loaded national SHAP importance for Random Forest ({len(df_shap_rf)} features)")
-        if df_shap_xgb is not None:
-            st.success(f"✓ Loaded national SHAP importance for XGBoost ({len(df_shap_xgb)} features)")
-        
-        st.divider()
+    if not os.path.exists(state_file):
+        st.warning("State-level aggregation file not found. Run the aggregation script first.")
+        return
 
-        # Engineered feature correlation matrix (national view)
-        st.subheader("🧩 Engineered Feature Correlation Matrix")
-        if df_clean is not None and not df_clean.empty:
-            requested_features = [
-                "lag_1", "lag_3", "lag_7", "lag_14",
-                "rolling_7_mean", "rolling_14_mean",
-                "rolling_7_std", "rolling_14_std",
-                "diff_1", "diff_7",
-                "month", "dayofyear", "weekday", "is_monsoon",
-            ]
-            feature_lookup = {
-                "lag_1": "lag_1",
-                "lag_3": "lag_3",
-                "lag_7": "lag_7",
-                "lag_14": "lag_14",
-                "rolling_7_mean": "rolling_7",
-                "rolling_14_mean": "rolling_14",
-                "rolling_7_std": "rolling_7_std",
-                "rolling_14_std": "rolling_14_std",
-                "diff_1": "diff_1",
-                "diff_7": "diff_7",
-                "month": "month",
-                "dayofyear": "dayofyear",
-                "weekday": "weekday",
-                "is_monsoon": "is_monsoon",
-            }
+    df_state = pd.read_csv(state_file)
+    if df_state.empty:
+        st.info("State-level aggregation file is present but contains no records.")
+    else:
+        st.subheader("State-level model metrics")
+        metric_cols = [
+            "state",
+            "Persistence__RMSE_mean",
+            "Random Forest__RMSE_mean",
+            "XGBoost__RMSE_mean",
+            "Persistence__MAE_mean",
+            "Random Forest__MAE_mean",
+            "XGBoost__MAE_mean",
+            "Persistence__MAPE_mean",
+            "Random Forest__MAPE_mean",
+            "XGBoost__MAPE_mean",
+            "Persistence__R2_mean",
+            "Random Forest__R2_mean",
+            "XGBoost__R2_mean",
+            "Persistence__NRMSE_mean",
+            "Random Forest__NRMSE_mean",
+            "XGBoost__NRMSE_mean",
+        ]
+        available_cols = [col for col in metric_cols if col in df_state.columns]
+        st.dataframe(df_state[available_cols].sort_values("state").reset_index(drop=True), use_container_width=True)
 
-            feature_cols = []
-            for requested_feature in requested_features:
-                lookup_name = feature_lookup[requested_feature]
-                candidates = [
-                    f"SHAP__Random Forest__{lookup_name}",
-                    f"SHAP__XGBoost__{lookup_name}",
-                    lookup_name,
-                ]
-                for col in candidates:
-                    if col in df_clean.columns:
-                        feature_cols.append(col)
-                        break
-
-            feature_cols = [col for col in feature_cols if col in df_clean.columns]
-            if feature_cols:
-                corr_source = df_clean[feature_cols].copy()
-                corr_source = corr_source.apply(pd.to_numeric, errors="coerce")
-                corr_source = corr_source.dropna(axis=1, how="all")
-                if corr_source.shape[1] >= 2:
-                    corr_frame = corr_source.corr(numeric_only=True).round(2)
-                    corr_fig = build_correlation_heatmap(corr_frame)
-                    _plotly_chart(corr_fig, key="national_engineered_feature_corr")
-                    st.caption("This matrix summarizes the relationships among the 14 engineered features using the feature representations available in the national aggregation dataset.")
-                    st.dataframe(corr_frame, use_container_width=True)
-                else:
-                    st.info("The available aggregation data did not contain enough numeric engineered-feature values to build the matrix.")
+        forecast_metric_cols = [
+            "Persistence__RMSE_mean",
+            "Random Forest__RMSE_mean",
+            "XGBoost__RMSE_mean",
+        ]
+        forecast_chart_cols = [col for col in forecast_metric_cols if col in df_state.columns]
+        if forecast_chart_cols:
+            st.divider()
+            st.subheader("Forecast error comparison across states")
+            forecast_df = df_state[["state"] + forecast_chart_cols].copy()
+            if "XGBoost__RMSE_mean" in forecast_df.columns:
+                forecast_df = forecast_df.sort_values("XGBoost__RMSE_mean", ascending=True)
             else:
-                st.info("No engineered feature columns were detected in the available national aggregation dataset.")
-        else:
-            st.info("No cleaned aggregation dataset was found, so the engineered feature correlation matrix could not be generated yet.")
+                forecast_df = forecast_df.sort_values(forecast_chart_cols[0], ascending=True)
 
-        st.divider()
-        
-        # Display KPI cards
-        st.subheader("📊 Key Performance Indicators")
-        if df_pub is not None and len(df_pub) > 0:
-            col1, col2, col3, col4 = st.columns(4)
-            
-            with col1:
-                rf_rows = df_pub[df_pub['Model'] == 'Random Forest']
-                if len(rf_rows) > 0:
-                    # FIXED — safe fallback if column missing
-                    rf_nrmse  = rf_rows['NRMSE (mean)'].iloc[0]  if 'NRMSE (mean)' in rf_rows.columns  else np.nan
-                    st.metric("RF NRMSE", f"{rf_nrmse:.4f}" if pd.notna(rf_nrmse) else "N/A")
-                else:
-                    st.metric("RF NRMSE", "N/A")
-            
-            with col2:
-                xgb_rows = df_pub[df_pub['Model'] == 'XGBoost']
-                if len(xgb_rows) > 0:
-                    xgb_nrmse = xgb_rows['NRMSE (mean)'].iloc[0] if 'NRMSE (mean)' in xgb_rows.columns else np.nan
-                    st.metric("XGBoost NRMSE", f"{xgb_nrmse:.4f}" if pd.notna(xgb_nrmse) else "N/A")
-                else:
-                    st.metric("XGBoost NRMSE", "N/A")
-            
-            with col3:
-                if len(xgb_rows) > 0 and 'R2 (mean)' in df_pub.columns:
-                    xgb_r2 = xgb_rows['R2 (mean)'].iloc[0]
-                    st.metric("XGBoost R²", f"{xgb_r2:.4f}" if pd.notna(xgb_r2) else "N/A")
-                else:
-                    st.metric("XGBoost R²", "N/A")
-            
-            with col4:
-                if 'Valid Districts' in df_pub.columns:
-                    valid_districts = df_pub['Valid Districts'].iloc[0]
-                    st.metric("Valid Districts", int(valid_districts) if pd.notna(valid_districts) else "N/A")
-                else:
-                    st.metric("Valid Districts", "N/A")
-        else:
-            st.warning("No publication metrics available")
-        
-        st.divider()
-        
-        # Model comparison metrics
-        st.subheader("📈 Model Performance Comparison")
-        if df_pub is not None and len(df_pub) > 0:
-            metrics_to_plot = ["NRMSE (mean)", "R2 (mean)", "NSE (mean)", "KGE (mean)"]
-            available_metrics = [m for m in metrics_to_plot if m in df_pub.columns]
-            
-            if available_metrics:
-                fig = make_subplots(
-                    rows=1, cols=len(available_metrics),
-                    subplot_titles=available_metrics,
-                    specs=[[{"type": "bar"} for _ in available_metrics]]
-                )
-                
-                colors = ["#1f77b4", "#ff7f0e", "#2ca02c"]
-                for idx, metric in enumerate(available_metrics, 1):
-                    for model_idx, (_, row) in enumerate(df_pub.iterrows()):
-                        model = row.get('Model', f'Model {model_idx}')
-                        value = row.get(metric, np.nan)
-                        fig.add_trace(
-                            go.Bar(x=[model], y=[value], name=model, marker_color=colors[model_idx % len(colors)], showlegend=(idx==1)),
-                            row=1, col=idx
-                        )
-                
-                fig = apply_research_style(fig, title="Performance comparison across metrics", height=400, x_title="Metric", y_title="Score", showlegend=True)
-                _plotly_chart(fig, key="model_comparison")
-        
-        # NRMSE comparison
-        st.subheader("📉 Normalized RMSE (Lower is Better)")
-        if df_pub is not None and len(df_pub) > 0 and "NRMSE (mean)" in df_pub.columns:
-            fig_nrmse = go.Figure()
-            for _, row in df_pub.iterrows():
-                model = row.get('Model', 'Unknown')
-                nrmse_val = row.get("NRMSE (mean)", np.nan)
-                nrmse_std = row.get("NRMSE (std)", 0) if "NRMSE (std)" in df_pub.columns else 0
-                fig_nrmse.add_trace(go.Bar(
-                    x=[model],
-                    y=[nrmse_val],
-                    error_y=dict(type='data', array=[nrmse_std if pd.notna(nrmse_std) else 0]),
-                    name=model
-                ))
-            fig_nrmse = apply_research_style(fig_nrmse, title="Normalized RMSE by model", height=400, x_title="Model", y_title="NRMSE", showlegend=False)
-            _plotly_chart(fig_nrmse, key="nrmse_comparison")
-        
-        # R² comparison
-        st.subheader("📊 R² Score (Higher is Better)")
-        if df_pub is not None and len(df_pub) > 0 and "R2 (mean)" in df_pub.columns:
-            fig_r2 = go.Figure()
-            for _, row in df_pub.iterrows():
-                model = row.get('Model', 'Unknown')
-                r2_val = row.get("R2 (mean)", np.nan)
-                r2_std = row.get("R2 (std)", 0) if "R2 (std)" in df_pub.columns else 0
-                fig_r2.add_trace(go.Bar(
-                    x=[model],
-                    y=[r2_val],
-                    error_y=dict(type='data', array=[r2_std if pd.notna(r2_std) else 0]),
-                    name=model
-                ))
-            fig_r2 = apply_research_style(fig_r2, title="Coefficient of determination by model", height=400, x_title="Model", y_title="R²", showlegend=False)
-            _plotly_chart(fig_r2, key="r2_comparison")
-        
-        # Regime Confusion Matrices (per-model when available)
-        st.subheader("🎯 Regime Classification Matrices and Accuracy")
-
-        # Try to use a precomputed confusion matrix CSV (generic)
-        if df_cm is not None and len(df_cm) > 0:
-            try:
-                pivot_cm = df_cm.pivot_table(index="Actual", columns="Pred", values="Count")
-                # ensure numeric and fill missing with zeros safely
-                pivot_cm = pivot_cm.fillna(0)
-                try:
-                    pivot_cm = pivot_cm.astype(int)
-                except Exception:
-                    pivot_cm = pivot_cm.apply(pd.to_numeric, errors='coerce').fillna(0).astype(int)
-                fig_cm = go.Figure(data=go.Heatmap(
-                    z=pivot_cm.values,
-                    x=pivot_cm.columns,
-                    y=pivot_cm.index,
-                    text=pivot_cm.values,
-                    texttemplate="%{text}",
-                    colorscale="Blues"
-                ))
-                fig_cm = apply_research_style(fig_cm, title="National confusion matrix", height=400, x_title="Predicted regime", y_title="Actual regime")
-                _plotly_chart(fig_cm, key="confusion_matrix")
-                st.dataframe(pivot_cm, use_container_width=True)
-            except Exception as cm_err:
-                st.warning(f"Could not render confusion matrix heatmap: {cm_err}")
-                st.dataframe(df_cm, use_container_width=True)
-
-        # If a cleaned dataset exists, attempt to compute per-model confusion + accuracy
-        df_regime_accuracy = None
-        df_regime_cm_by_model = None
-        if df_clean is not None:
-            cm_cols = [c for c in df_clean.columns if 'cm__' in c]
-            if cm_cols:
-                rows = []
-                for c in cm_cols:
-                    try:
-                        left, right = c.split('cm__', 1)
-                        model = left.rstrip('_').strip()
-                        # right looks like 'Actual Low__Pred Low' -> extract labels
-                        if '__Pred ' in right:
-                            actual_part, pred_part = right.split('__Pred ', 1)
-                        else:
-                            parts = right.split('__Pred')
-                            actual_part = parts[0]
-                            pred_part = parts[-1]
-                        actual = actual_part.replace('Actual', '').replace('__', '').strip().lstrip(':').strip()
-                        pred = pred_part.replace('__', '').strip()
-                        vals = pd.to_numeric(df_clean[c], errors='coerce').fillna(0)
-                        count = vals.sum()
-                        rows.append({'Model': model or 'model', 'Actual': actual or 'Unknown', 'Pred': pred or 'Unknown', 'Count': int(count)})
-                    except Exception:
-                        continue
-                if rows:
-                    df_regime_cm_by_model = pd.DataFrame(rows)
-                    try:
-                        df_regime_cm_by_model.to_csv(os.path.join(output_dir, 'regime_confusion_by_model.csv'), index=False)
-                    except Exception:
-                        pass
-
-                    # compute per-model accuracy/precision/recall/f1 (macro)
-                    metrics_rows = []
-                    for model, g in df_regime_cm_by_model.groupby('Model'):
-                        pivot = g.pivot_table(index='Actual', columns='Pred', values='Count', fill_value=0)
-                        total = pivot.values.sum()
-                        correct = 0
-                        for lab in pivot.index:
-                            if lab in pivot.columns:
-                                correct += pivot.at[lab, lab]
-                        accuracy = float(correct) / float(total) if total > 0 else np.nan
-                        precisions = []
-                        recalls = []
-                        for lab in pivot.index:
-                            tp = pivot.at[lab, lab] if lab in pivot.columns else 0
-                            fp = pivot[lab].sum() - tp if lab in pivot.columns else 0
-                            fn = pivot.loc[lab].sum() - tp
-                            prec = float(tp) / (tp + fp) if (tp + fp) > 0 else np.nan
-                            rec = float(tp) / (tp + fn) if (tp + fn) > 0 else np.nan
-                            precisions.append(prec)
-                            recalls.append(rec)
-                        precision_macro = float(np.nanmean([p for p in precisions if pd.notna(p)])) if any(pd.notna(precisions)) else np.nan
-                        recall_macro = float(np.nanmean([r for r in recalls if pd.notna(r)])) if any(pd.notna(recalls)) else np.nan
-                        f1s = [2 * p * r / (p + r) if (pd.notna(p) and pd.notna(r) and (p + r) > 0) else np.nan for p, r in zip(precisions, recalls)]
-                        f1_macro = float(np.nanmean([x for x in f1s if pd.notna(x)])) if any(pd.notna(f1s)) else np.nan
-                        metrics_rows.append({'Model': model, 'Accuracy': accuracy, 'Precision (macro)': precision_macro, 'Recall (macro)': recall_macro, 'F1 (macro)': f1_macro, 'Total': int(total)})
-                    df_regime_accuracy = pd.DataFrame(metrics_rows)
-                    try:
-                        df_regime_accuracy.to_csv(os.path.join(output_dir, 'regime_accuracy_table.csv'), index=False)
-                    except Exception:
-                        pass
-
-        # Render per-model confusion heatmaps and accuracy table if computed
-        if df_regime_cm_by_model is not None and len(df_regime_cm_by_model) > 0:
-            st.write("**Per-model confusion aggregates (computed from cleaned dataset)**")
-            for model, g in df_regime_cm_by_model.groupby('Model'):
-                st.markdown(f"**Model: {model}**")
-                pivot = g.pivot_table(index='Actual', columns='Pred', values='Count')
-                pivot = pivot.fillna(0)
-                try:
-                    pivot = pivot.astype(int)
-                except Exception:
-                    pivot = pivot.apply(pd.to_numeric, errors='coerce').fillna(0).astype(int)
-                fig_m = go.Figure(data=go.Heatmap(z=pivot.values, x=pivot.columns, y=pivot.index, colorscale='Blues', text=pivot.values, texttemplate="%{text}"))
-                fig_m = apply_research_style(fig_m, title=f"Confusion matrix: {model}", height=350, x_title="Predicted regime", y_title="Actual regime")
-                _plotly_chart(fig_m, key=f"cm_{model}")
-                st.dataframe(pivot, use_container_width=True)
-
-        if df_regime_accuracy is not None and len(df_regime_accuracy) > 0:
-            st.write("**Regime classification accuracy summary**")
-            # Sanitize numeric columns to avoid Arrow overflow when Streamlit converts to Arrow
-            df_ra = df_regime_accuracy.sort_values('Accuracy', ascending=False).reset_index(drop=True).copy()
-            for col in df_ra.columns:
-                # attempt to coerce any column to numeric; if successful, keep as float and clean extremes
-                temp = pd.to_numeric(df_ra[col], errors='coerce')
-                if temp.notna().sum() == 0:
-                    # nothing numeric in this column
-                    continue
-                # convert to float for safe Arrow conversion
-                try:
-                    temp = temp.astype(float)
-                except Exception:
-                    temp = pd.to_numeric(temp, errors='coerce')
-
-                # remove infinities and non-finite
-                temp[~np.isfinite(temp)] = np.nan
-
-                # cap/clean very large magnitudes that may overflow Arrow (int64 limit ~9e18)
-                # use a conservative threshold to detect erroneous huge counts
-                huge_thresh = 1e12
-                try:
-                    temp[temp.abs() > huge_thresh] = np.nan
-                except Exception:
-                    pass
-
-                df_ra[col] = temp
-
-            st.dataframe(df_ra, use_container_width=True)
-
-        # National SHAP feature importance
-        st.subheader("🧠 National SHAP feature importance")
-        if df_shap_rf is None and df_shap_xgb is None:
-            st.write("No national SHAP files were found. Run the aggregation script to generate shap_national_Random_Forest.csv and shap_national_XGBoost.csv.")
-        else:
-            if df_shap_rf is not None:
-                st.markdown("#### Random Forest")
-                st.dataframe(df_shap_rf.sort_values('mean_abs_shap', ascending=False).head(20), use_container_width=True)
-            if df_shap_xgb is not None:
-                st.markdown("#### XGBoost")
-                st.dataframe(df_shap_xgb.sort_values('mean_abs_shap', ascending=False).head(20), use_container_width=True)
-
-        st.subheader("📚 Publication figures")
-        state_anom_file = os.path.join(output_dir, "anomaly_density_by_state.csv")
-        df_state_anom = pd.read_csv(state_anom_file) if os.path.exists(state_anom_file) else None
-
-        if trained is not None and forecast_df is not None and "featured" in trained:
-            forecast_pub_fig = build_forecast_figure(trained["featured"], forecast_df)
-            _plotly_chart(forecast_pub_fig, key="publication_forecast")
-            forecast_save_path = _save_research_figure(forecast_pub_fig, "publication_forecast_actual_vs_predicted")
-            if forecast_save_path:
-                st.caption(f"Saved locally: {forecast_save_path}")
-        else:
-            st.info("Forecast figure is available only when the current district-level model has already been run.")
-
-        metrics_pub_fig = build_national_metric_figure(df_pub)
-        _plotly_chart(metrics_pub_fig, key="publication_metrics")
-        metrics_save_path = _save_research_figure(metrics_pub_fig, "publication_model_performance")
-        if metrics_save_path:
-            st.caption(f"Saved locally: {metrics_save_path}")
-
-        anomaly_map_fig = build_national_anomaly_map(df_state_anom)
-        _plotly_chart(anomaly_map_fig, key="publication_anomaly_map")
-        anomaly_map_save_path = _save_research_figure(anomaly_map_fig, "publication_india_anomaly_map")
-        if anomaly_map_save_path:
-            st.caption(f"Saved locally: {anomaly_map_save_path}")
-
-        anomaly_bar_fig = build_national_anomaly_bar(df_state_anom)
-        _plotly_chart(anomaly_bar_fig, key="publication_anomalous_states")
-        anomaly_bar_save_path = _save_research_figure(anomaly_bar_fig, "publication_anomalous_states_bar")
-        if anomaly_bar_save_path:
-            st.caption(f"Saved locally: {anomaly_bar_save_path}")
-
-        shap_bar_fig = build_national_shap_bar(df_clean, model="XGBoost")
-        _plotly_chart(shap_bar_fig, key="publication_shap_bar")
-        shap_bar_save_path = _save_research_figure(shap_bar_fig, "publication_xgb_shap_bar")
-        if shap_bar_save_path:
-            st.caption(f"Saved locally: {shap_bar_save_path}")
-
-        shap_bee_fig = build_national_shap_beeswarm(df_clean, model="XGBoost")
-        _plotly_chart(shap_bee_fig, key="publication_shap_beeswarm")
-        shap_bee_save_path = _save_research_figure(shap_bee_fig, "publication_xgb_shap_beeswarm")
-        if shap_bee_save_path:
-            st.caption(f"Saved locally: {shap_bee_save_path}")
-
-        if df_cm is not None and len(df_cm) > 0:
-            try:
-                xgb_pivot = df_cm.pivot_table(index="Actual", columns="Pred", values="Count", fill_value=0)
-                xgb_pivot = xgb_pivot.reindex(index=["Actual Low", "Actual Moderate", "Actual High"], columns=["Pred Low", "Pred Moderate", "Pred High"], fill_value=0)
-                xgb_fig = go.Figure(
-                    data=go.Heatmap(
-                        z=xgb_pivot.values,
-                        x=xgb_pivot.columns.tolist(),
-                        y=xgb_pivot.index.tolist(),
-                        colorscale="Blues",
-                        text=xgb_pivot.values,
-                        texttemplate="%{text}",
-                        hovertemplate="Actual: %{y}<br>Predicted: %{x}<br>Count: %{z}<extra></extra>",
+            forecast_fig = go.Figure()
+            if "Persistence__RMSE_mean" in forecast_df.columns:
+                forecast_fig.add_trace(
+                    go.Bar(
+                        x=forecast_df["state"],
+                        y=forecast_df["Persistence__RMSE_mean"],
+                        name="Persistence",
+                        marker=dict(color="#6baed6"),
                     )
                 )
-                xgb_fig = apply_research_style(xgb_fig, title="XGBoost confusion matrix", height=420, x_title="Predicted regime", y_title="Actual regime")
-                _plotly_chart(xgb_fig, key="publication_xgb_cm")
-                xgb_cm_save_path = _save_research_figure(xgb_fig, "publication_xgb_confusion_matrix")
-                if xgb_cm_save_path:
-                    st.caption(f"Saved locally: {xgb_cm_save_path}")
-            except Exception as exc:
-                st.warning(f"Could not render XGBoost confusion matrix figure: {exc}")
+            if "Random Forest__RMSE_mean" in forecast_df.columns:
+                forecast_fig.add_trace(
+                    go.Bar(
+                        x=forecast_df["state"],
+                        y=forecast_df["Random Forest__RMSE_mean"],
+                        name="Random Forest",
+                        marker=dict(color="#74c476"),
+                    )
+                )
+            if "XGBoost__RMSE_mean" in forecast_df.columns:
+                forecast_fig.add_trace(
+                    go.Bar(
+                        x=forecast_df["state"],
+                        y=forecast_df["XGBoost__RMSE_mean"],
+                        name="XGBoost",
+                        marker=dict(color="#fd8d3c"),
+                    )
+                )
+            forecast_fig.update_layout(barmode="group", height=620)
+            forecast_fig.update_xaxes(tickangle=-45)
+            forecast_fig = apply_research_style(
+                forecast_fig,
+                title="State-level model RMSE comparison",
+                height=620,
+                x_title="State",
+                y_title="RMSE",
+                showlegend=True,
+            )
+            _plotly_chart(forecast_fig, key="state_level_rmse_comparison")
 
-        # Feature ↔ Metric correlations
-        st.subheader("🔗 Feature vs. Metric Correlations")
-        if df_corr is None:
-            st.write("No precomputed feature-metric correlations found. Run the aggregation script to generate `feature_metric_correlations.csv`.")
+    if os.path.exists(anomaly_file):
+        df_anom = pd.read_csv(anomaly_file)
+        if not df_anom.empty:
+            st.divider()
+            st.subheader("State anomaly density")
+            if "anomaly_mean" in df_anom.columns:
+                df_anom = df_anom.rename(columns={"anomaly_mean": "anomaly_density_mean"})
+            st.dataframe(df_anom.sort_values("state").reset_index(drop=True), use_container_width=True)
+
+            if "anomaly_density_mean" in df_anom.columns:
+                anom_fig = go.Figure(
+                    go.Bar(
+                        x=df_anom.sort_values("anomaly_density_mean", ascending=False)["state"],
+                        y=df_anom.sort_values("anomaly_density_mean", ascending=False)["anomaly_density_mean"],
+                        marker=dict(
+                            color=df_anom.sort_values("anomaly_density_mean", ascending=False)["anomaly_density_mean"],
+                            colorscale="YlOrRd",
+                        ),
+                    )
+                )
+                anom_fig.update_xaxes(tickangle=-45)
+                anom_fig = apply_research_style(
+                    anom_fig,
+                    title="State-wise anomaly density",
+                    height=520,
+                    x_title="State",
+                    y_title="Mean anomaly density",
+                    showlegend=False,
+                )
+                _plotly_chart(anom_fig, key="state_level_anomaly_density")
         else:
-            # show top absolute correlations
-            df_corr['absR'] = df_corr['WeightedPearsonR'].abs()
-            topk = st.slider('Top features to show (by |r|)', min_value=5, max_value=100, value=20)
-            df_top = df_corr.sort_values('absR', ascending=False).head(topk)
-            st.dataframe(df_top[['Feature','Model','Metric','WeightedPearsonR','N_valid']].reset_index(drop=True), use_container_width=True)
-            # allow user to filter by model and metric
-            st.markdown('**Filter by model / metric**')
-            models_available = sorted(df_corr['Model'].unique())
-            metrics_available = sorted(df_corr['Metric'].unique())
-            sel_model = st.selectbox('Model', options=['ALL'] + models_available)
-            sel_metric = st.selectbox('Metric', options=['ALL'] + metrics_available)
-            mask = pd.Series(True, index=df_corr.index)
-            if sel_model != 'ALL':
-                mask &= df_corr['Model'] == sel_model
-            if sel_metric != 'ALL':
-                mask &= df_corr['Metric'] == sel_metric
-            df_filt = df_corr[mask].copy()
-            if df_filt.empty:
-                st.write('No feature correlations for this selection.')
-            else:
-                df_filt['absR'] = df_filt['WeightedPearsonR'].abs()
-                st.dataframe(df_filt.sort_values('absR', ascending=False).reset_index(drop=True), use_container_width=True)
+            st.info("State anomaly density file is present but empty.")
+    else:
+        st.warning("State anomaly density file not found in aggregation outputs.")
 
-        
-        # Model ranking wins
-        st.subheader("🏆 Model Win Frequencies (by District)")
-        if df_rankings is not None and len(df_rankings) > 0 and "rank_1" in df_rankings.columns:
-            rank1_counts = df_rankings["rank_1"].value_counts()
-            if len(rank1_counts) > 0:
-                fig_wins = go.Figure()
-                for model, count in rank1_counts.items():
-                    total_valid = len(df_rankings.dropna(subset=["rank_1"]))
-                    pct = 100 * count / total_valid if total_valid > 0 else 0
-                    fig_wins.add_trace(go.Bar(x=[model], y=[count], name=model, text=f"{pct:.1f}%", textposition="auto"))
-                fig_wins = apply_research_style(fig_wins, title="District-wise model win frequency", height=400, x_title="Model", y_title="District count", showlegend=False)
-                _plotly_chart(fig_wins, key="model_wins")
+    shap_rf = _load_shap_importance(shap_rf_file)
+    shap_xgb = _load_shap_importance(shap_xgb_file)
+    if shap_rf is None and shap_xgb is None:
+        st.warning("No aggregated SHAP importance files were found for state-level visualization.")
+        return
 
-        # IsolationForest / Anomaly density summaries
-        anom_file = os.path.join(output_dir, 'anomaly_density_by_district.csv')
-        df_anom = None
-        if os.path.exists(anom_file):
-            try:
-                df_anom = pd.read_csv(anom_file)
-                st.success(f"✓ Loaded anomaly density file ({len(df_anom)} districts)")
-            except Exception as e:
-                st.warning(f"Could not read anomaly density file: {e}")
+    st.divider()
+    st.subheader("Aggregated SHAP importances")
+    cols = st.columns(2)
+    if shap_rf is not None:
+        with cols[0]:
+            rf_fig = go.Figure(go.Bar(x=shap_rf["mean_abs_shap"], y=shap_rf["feature"], orientation="h", marker=dict(color="#2b8cbe")))
+            rf_fig = apply_research_style(rf_fig, title="Random Forest SHAP importance", height=520, x_title="Mean |SHAP|", y_title="Feature", showlegend=False)
+            _plotly_chart(rf_fig, key="state_level_shap_rf")
+    if shap_xgb is not None:
+        with cols[1]:
+            xgb_fig = go.Figure(go.Bar(x=shap_xgb["mean_abs_shap"], y=shap_xgb["feature"], orientation="h", marker=dict(color="#d95f02")))
+            xgb_fig = apply_research_style(xgb_fig, title="XGBoost SHAP importance", height=520, x_title="Mean |SHAP|", y_title="Feature", showlegend=False)
+            _plotly_chart(xgb_fig, key="state_level_shap_xgb")
 
-        if df_anom is None and df_clean is not None:
-            # fallback: derive anomaly density from cleaned dataset if explicit anomaly file is missing
-            candidate_cols = [c for c in df_clean.columns if c.lower().startswith('if__anomaly_density') or c.lower().startswith('if__anomaly_count')]
-            if 'district' in df_clean.columns and candidate_cols:
-                df_anom = df_clean[['state', 'district'] + [c for c in candidate_cols if c in df_clean.columns]].copy()
-                st.info("Fallback: using cleaned aggregation dataset to derive anomaly density summaries.")
 
-        if df_anom is not None:
-            try:
-                st.subheader("🧭 Anomaly Density (district-level)")
-                possible_cols = [c for c in df_anom.columns if 'anomaly' in c.lower() or 'isolation' in c.lower() or 'score' in c.lower()]
-                if len(possible_cols) == 0:
-                    st.write("No anomaly density column detected in anomaly data.")
-                else:
-                    col = possible_cols[0]
-                    fig_ad = go.Figure()
-                    fig_ad.add_trace(go.Histogram(x=df_anom[col].dropna(), nbinsx=40))
-                    fig_ad = apply_research_style(fig_ad, title=f"Distribution of {col}", height=350, x_title=col, y_title="Count")
-                    _plotly_chart(fig_ad, key="anom_hist")
-                    st.write("Top anomalous districts")
-                    if 'district' in df_anom.columns:
-                        top = df_anom.sort_values(by=col, ascending=False).head(20)
-                        st.dataframe(top[['district', 'state', col]] if 'state' in df_anom.columns else top[['district', col]], use_container_width=True)
-                    state_col = None
-                    for cand in ['state', 'State', 'STATE']:
-                        if cand in df_anom.columns:
-                            state_col = cand
-                            break
-                    if state_col is not None:
-                        df_state_anom = df_anom.groupby(state_col)[col].mean().reset_index().rename(columns={col: 'anomaly_mean'})
-                        try:
-                            df_state_anom.to_csv(os.path.join(output_dir, 'anomaly_density_by_state.csv'), index=False)
-                        except Exception:
-                            pass
-                        st.subheader("Anomaly density by state (mean)")
-                        fig_state = go.Figure(go.Bar(x=df_state_anom[state_col], y=df_state_anom['anomaly_mean']))
-                        fig_state = apply_research_style(fig_state, title="Mean anomaly density by state", height=350, x_title="State", y_title="Mean anomaly density")
-                        _plotly_chart(fig_state, key="anom_state")
-            except Exception as e:
-                st.warning(f"Could not load anomaly data: {e}")
+def render_national_aggregation_dashboard():
+    """Render the national-level aggregation metrics dashboard from cached aggregation files."""
+    output_dir = os.path.join(parent_dir, "aggregation_outputs")
+
+    if not os.path.exists(output_dir):
+        st.warning("Aggregation outputs directory not found. Run the aggregation script first.")
+        return
+
+    national_file = os.path.join(output_dir, "national_level_aggregation.csv")
+    anomaly_file = os.path.join(output_dir, "anomaly_density_by_state.csv")
+    shap_rf_file = os.path.join(output_dir, "shap_national_Random_Forest.csv")
+    shap_xgb_file = os.path.join(output_dir, "shap_national_XGBoost.csv")
+
+    if not os.path.exists(national_file):
+        st.warning("National-level aggregation file not found.")
+        return
+
+    df_national = pd.read_csv(national_file)
+    if df_national.empty:
+        st.info("National-level aggregation file is present but contains no records.")
+    else:
+        st.subheader("National model metrics")
+        table_columns = [
+            "Model",
+            "n_districts",
+            "total_obs",
+            "RMSE_mean",
+            "MAE_mean",
+            "MAPE_mean",
+            "R2_mean",
+            "mNSE_mean",
+            "KGE_mean",
+            "NRMSE_mean",
+        ]
+        available_cols = [col for col in table_columns if col in df_national.columns]
+        st.dataframe(df_national[available_cols].reset_index(drop=True), use_container_width=True)
+
+        st.divider()
+        st.subheader("National forecast comparison")
+        forecast_fig = build_national_metric_figure(df_national)
+        _plotly_chart(forecast_fig, key="national_metric_comparison")
+
+    if os.path.exists(anomaly_file):
+        df_anom = pd.read_csv(anomaly_file)
+        if df_anom.empty:
+            st.info("Anomaly density file is present but empty.")
         else:
-            st.warning("No anomaly density output was found. Run the aggregation script or ensure anomaly density columns exist in the cleaned dataset.")
+            st.divider()
+            st.subheader("India anomaly density")
+            if "anomaly_mean" in df_anom.columns:
+                df_anom = df_anom.rename(columns={"anomaly_mean": "anomaly_density_mean"})
+            st.dataframe(df_anom.sort_values("state").reset_index(drop=True), use_container_width=True)
 
-        st.divider()
-        
-        # Summary statistics
-        st.subheader("📋 Aggregation Summary")
-        col1, col2, col3 = st.columns(3)
-        with col1:
-            if df_excluded is not None:
-                st.metric("Districts Excluded", len(df_excluded))
-            if df_national is not None and len(df_national) > 0 and "n_districts" in df_national.columns:
-                st.metric("Valid Districts", int(df_national["n_districts"].iloc[0]))
-        with col2:
-            if df_excluded is not None and len(df_excluded) > 0:
-                st.write("**Top Exclusion Reasons:**")
-                if "exclude_reasons" in df_excluded.columns:
-                    reasons = df_excluded["exclude_reasons"].value_counts()
-                    for reason, count in reasons.head(3).items():
-                        st.write(f"  • {reason}: {count}")
-        with col3:
-            st.write("**Publication Metrics:**")
-            if df_pub is not None:
-                st.dataframe(df_pub[["Model", "NRMSE (mean)", "R2 (mean)", "Valid Districts"]], use_container_width=True)
-        
-        st.divider()
-        
-        # Detailed metrics table
-        st.subheader("📊 Detailed National Metrics")
-        st.dataframe(df_national, use_container_width=True)
-        
-        st.divider()
-        
-        # Download buttons
-        st.subheader("💾 Download Outputs")
-        col1, col2, col3, col4 = st.columns(4)
-        with col1:
-            if df_national is not None:
-                st.download_button(
-                    "📊 National Metrics",
-                    data=df_national.to_csv(index=False).encode('utf-8'),
-                    file_name="national_level_aggregation.csv",
-                    mime="text/csv"
-                )
-        with col2:
-            if df_pub is not None:
-                st.download_button(
-                    "📈 Publication Table",
-                    data=df_pub.to_csv(index=False).encode('utf-8'),
-                    file_name="publication_national_table.csv",
-                    mime="text/csv"
-                )
-        with col3:
-            if df_cm is not None:
-                st.download_button(
-                    "🎯 Confusion Matrix",
-                    data=df_cm.to_csv(index=False).encode('utf-8'),
-                    file_name="xgb_confusion_matrix_summary.csv",
-                    mime="text/csv"
-                )
-        with col4:
-            if df_rankings is not None:
-                st.download_button(
-                    "🏆 Model Rankings",
-                    data=df_rankings.to_csv(index=False).encode('utf-8'),
-                    file_name="district_model_rankings.csv",
-                    mime="text/csv"
-                )
-        # extra downloads (regime accuracy, anomaly state)
-        cols_extra = st.columns(3)
-        with cols_extra[0]:
-            ra_file = os.path.join(output_dir, 'regime_accuracy_table.csv')
-            if os.path.exists(ra_file):
-                st.download_button('📈 Regime Accuracy', data=open(ra_file,'rb').read(), file_name='regime_accuracy_table.csv', mime='text/csv')
-        with cols_extra[1]:
-            rcm_file = os.path.join(output_dir, 'regime_confusion_by_model.csv')
-            if os.path.exists(rcm_file):
-                st.download_button('🎯 Regime Confusions (by model)', data=open(rcm_file,'rb').read(), file_name='regime_confusion_by_model.csv', mime='text/csv')
-        with cols_extra[2]:
-            an_state_file = os.path.join(output_dir, 'anomaly_density_by_state.csv')
-            if os.path.exists(an_state_file):
-                st.download_button('🧭 Anomaly by State', data=open(an_state_file,'rb').read(), file_name='anomaly_density_by_state.csv', mime='text/csv')
-        
-    except Exception as e:
-        error_type = type(e).__name__
-        error_msg = str(e)
-        st.error(f"❌ Error: {error_type}: {error_msg}")
-        st.error(f"Traceback:\n```\n{traceback.format_exc()}\n```")
+            st.divider()
+            st.subheader("India anomaly density map")
+            anomaly_map = build_national_anomaly_map(df_anom)
+            _plotly_chart(anomaly_map, key="national_anomaly_map")
+
+            st.divider()
+            st.subheader("Top anomalous states")
+            anomaly_bar = build_national_anomaly_bar(df_anom)
+            _plotly_chart(anomaly_bar, key="national_anomaly_bar")
+    else:
+        st.warning("Anomaly density file not found in aggregation outputs.")
+
+    shap_rf = _load_shap_importance(shap_rf_file)
+    shap_xgb = _load_shap_importance(shap_xgb_file)
+    if shap_rf is None and shap_xgb is None:
+        st.warning("No aggregated SHAP importance files were found for national-level visualization.")
+        return
+
+    st.divider()
+    st.subheader("National aggregated SHAP importances")
+    cols = st.columns(2)
+    if shap_rf is not None:
+        with cols[0]:
+            rf_fig = go.Figure(go.Bar(x=shap_rf["mean_abs_shap"], y=shap_rf["feature"], orientation="h", marker=dict(color="#0f4c81")))
+            rf_fig = apply_research_style(rf_fig, title="Random Forest SHAP importance", height=520, x_title="Mean |SHAP|", y_title="Feature", showlegend=False)
+            _plotly_chart(rf_fig, key="national_level_shap_rf")
+    if shap_xgb is not None:
+        with cols[1]:
+            xgb_fig = go.Figure(go.Bar(x=shap_xgb["mean_abs_shap"], y=shap_xgb["feature"], orientation="h", marker=dict(color="#d95f02")))
+            xgb_fig = apply_research_style(xgb_fig, title="XGBoost SHAP importance", height=520, x_title="Mean |SHAP|", y_title="Feature", showlegend=False)
+            _plotly_chart(xgb_fig, key="national_level_shap_xgb")
 
 
 def main():
@@ -2547,6 +2160,12 @@ def main():
             border-radius: 14px;
             padding: 0.75rem 0.9rem;
             box-shadow: 0 6px 20px rgba(0, 0, 0, 0.05);
+            color: #000000 !important;
+        }
+        [data-testid="stMetric"] span,
+        [data-testid="stMetric"] div,
+        [data-testid="stMetric"] p {
+            color: #000000 !important;
         }
         [data-testid="stDataFrame"] {
             background: #ffffff;
@@ -2595,7 +2214,6 @@ def main():
         """
         <div class="hero">
             <h1 style="margin:0;">JalDarpan</h1>
-            <p class="subtle" style="margin:0.35rem 0 0 0;">Simple groundwater insights for day-to-day use, with a separate research view for detailed evaluation.</p>
         </div>
         """,
         unsafe_allow_html=True,
@@ -2640,19 +2258,25 @@ def main():
 
     if run_button:
         with st.spinner("Fetching and preparing groundwater data..."):
-            try:
-                raw_df = fetch_groundwater_data(
-                    backend_url,
-                    state,
-                    district,
-                    agency,
-                    startdate.strftime("%Y-%m-%d"),
-                    enddate.strftime("%Y-%m-%d"),
-                    int(size),
-                )
-            except Exception as exc:
-                st.warning(f"Live fetch failed: {exc}")
-                raw_df = load_cached_data()
+            raw_df = None
+            cached_df = load_cached_data()
+            if cached_df is not None and not cached_df.empty:
+                raw_df = cached_df.copy()
+                st.caption("Using the local cached data for the district-level view.")
+            else:
+                try:
+                    raw_df = fetch_groundwater_data(
+                        backend_url,
+                        state,
+                        district,
+                        agency,
+                        startdate.strftime("%Y-%m-%d"),
+                        enddate.strftime("%Y-%m-%d"),
+                        int(size),
+                    )
+                except Exception as exc:
+                    st.warning(f"Live fetch failed: {exc}")
+                    raw_df = None
 
         if raw_df is None or raw_df.empty:
             st.error("No groundwater data available from live API or local cache.")
@@ -2695,87 +2319,24 @@ def main():
             trained,
         )
 
-        render_kpis(trained["featured"], trained["metrics"], forecast_df)
-
-        home_tab, research_tab, national_tab = st.tabs(["Home", "Research", "National Aggregation"])
+        home_tab, research_tab, national_tab = st.tabs(["District Level", "State Level", "National Level"])
 
         with home_tab:
-            st.markdown('<div class="section-card">', unsafe_allow_html=True)
-            st.markdown("### Live groundwater view")
-            st.write(
-                "A simple snapshot for non-technical users: the selected area, the latest groundwater movement, unusual readings, and a short-term forecast with plain-language interpretation."
-            )
-            st.dataframe(trained["featured"].tail(12), use_container_width=True)
-            st.markdown("</div>", unsafe_allow_html=True)
-
-            st.divider()
-            render_map_panel(location_context, trained["featured"])
-
-            st.divider()
-            render_forecast_and_anomaly_panel(trained, forecast_df)
-
-            st.divider()
-            render_dataset_analysis_panel(state, district, trained["featured"], trained, forecast_df, build_benchmark_aggregates(load_benchmark_runs()))
-
-            st.divider()
-            st.subheader("Simple explanation")
-            render_model_explainer_dialogs()
+            st.markdown("### District-level dashboard")
             sample, shap_values = shap_summary(trained["xgb"], trained["featured"], feature_cols)
-            top_features = pd.Series(np.abs(shap_values).mean(axis=0), index=feature_cols).sort_values(ascending=False)
-            st.write(
-                "The model is mainly using recent groundwater history and seasonal patterns to make its next-step estimate. The strongest drivers are: "
-                + ", ".join(top_features.head(5).index.tolist())
-            )
-            st.dataframe(top_features.rename("mean_abs_shap").to_frame(), use_container_width=True)
-            st.info(
-                "SHAP shows which recent signals are pushing the forecast up or down. Anomaly detection flags unusual points so users can review them before trusting the trend."
-            )
-            render_plain_language_panels(trained, forecast_df, feature_cols, shap_values)
-            render_alert_tables(load_benchmark_runs())
+            render_district_level_home_tab(state, district, trained["featured"], forecast_df, trained, location_context, shap_values, feature_cols)
 
-        with research_tab:
-            st.subheader("Research metrics and graphics")
-            st.caption("This tab keeps the research-style evaluation separate from the normal user view.")
-            render_research_protocol(trained, feature_cols, shap_values)
             st.divider()
             render_pattern_panel(trained, feature_cols)
-            st.divider()
-            render_benchmark_panel(trained)
 
             st.divider()
-            st.subheader("Detailed explainability")
-            sample, shap_values = shap_summary(trained["xgb"], trained["featured"], feature_cols)
-            bar_fig, ax = plt.subplots(figsize=(10, 6))
-            shap.summary_plot(shap_values, sample, plot_type="bar", show=False)
-            st.pyplot(bar_fig, clear_figure=True)
+            render_shap_explanation_panel(feature_cols, shap_values)
 
-            dot_fig, ax = plt.subplots(figsize=(10, 6))
-            shap.summary_plot(shap_values, sample, show=False)
-            st.pyplot(dot_fig, clear_figure=True)
-
-            st.write("Top drivers: " + ", ".join(pd.Series(np.abs(shap_values).mean(axis=0), index=feature_cols).sort_values(ascending=False).head(5).index.tolist()))
-            st.info(
-                "The research view follows the paper-style structure: feature ranking, SHAP spread, temporal contribution heatmap, correlation matrix, regime confusion matrix, and pooled performance summary."
-            )
-
-            st.divider()
-            render_transparency_explainers(trained, forecast_df, feature_cols, shap_values)
-
-            st.divider()
-            render_methodology_cards(trained["featured"], feature_cols, trained)
-            st.markdown("### Research data")
-            st.dataframe(raw_df, use_container_width=True)
-            st.download_button(
-                "Download cleaned features as CSV",
-                data=trained["featured"].reset_index().to_csv(index=False).encode("utf-8"),
-                file_name="jaldarpan_features.csv",
-                mime="text/csv",
-            )
+        with research_tab:
+            render_state_level_dashboard()
 
         with national_tab:
-            st.subheader("National-Level Aggregation Metrics")
-            st.caption("All India aggregated metrics across models with comparative visualizations.")
-            render_national_aggregation_dashboard(trained=trained, forecast_df=forecast_df)
+            render_national_aggregation_dashboard()
 
         st.success("Dashboard ready: map, heatmaps, explainability, and research validation are available in a simplified layout.")
 

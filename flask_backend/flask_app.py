@@ -52,6 +52,24 @@ def _normalize_key(value):
 
 
 @functools.lru_cache(maxsize=1)
+def _load_dataset_states():
+    """Load all states from the aggregation dataset to ensure complete coverage."""
+    if not os.path.exists(AGGREGATION_DATASET):
+        return FALLBACK_STATES
+    
+    try:
+        frame = pd.read_csv(AGGREGATION_DATASET, usecols=["state"])
+    except Exception as exc:
+        logger.warning("Could not load states from aggregation dataset: %s", exc)
+        return FALLBACK_STATES
+    
+    states = sorted({str(value).strip() for value in frame["state"] if str(value).strip()})
+    if states:
+        return states
+    return FALLBACK_STATES
+
+
+@functools.lru_cache(maxsize=1)
 def _load_dataset_district_map():
     if not os.path.exists(AGGREGATION_DATASET):
         return {}
@@ -234,6 +252,14 @@ def groundwater():
 @app.route("/states")
 def states():
     logger.info("State list requested")
+    
+    # First, try to get states from the aggregation dataset (most comprehensive)
+    dataset_states = _load_dataset_states()
+    if dataset_states and len(dataset_states) > len(FALLBACK_STATES):
+        logger.info("Returning %d states from dataset", len(dataset_states))
+        return jsonify({"status": "success", "states": dataset_states}), 200
+    
+    # Fall back to WRIS API if dataset states are insufficient
     url = f"{WRIS_API_BASE}/getStatesListDataViewPage/"
     response = _request_wris(url, method='get')
     if response is None:
@@ -246,49 +272,54 @@ def states():
         logger.warning("WRIS states response invalid; returning fallback state list")
         return jsonify({"status": "success", "states": FALLBACK_STATES}), 200
 
-    states = _normalize_wris_list(payload, ["state", "State", "stateName", "StateName", "name"])
-    if not states:
-        return jsonify({"status": "success", "states": FALLBACK_STATES}), 200
-    return jsonify({"status": "success", "states": sorted(set(states))})
+    states_list = _normalize_wris_list(payload, ["state", "State", "stateName", "StateName", "name"])
+    if not states_list:
+        return jsonify({"status": "success", "states": dataset_states or FALLBACK_STATES}), 200
+    
+    # Merge WRIS states with dataset states for maximum coverage
+    merged_states = sorted(set(states_list) | set(dataset_states or []))
+    return jsonify({"status": "success", "states": merged_states})
 
 
 @app.route("/districts/<path:state>")
 def districts(state):
     logger.info("District list requested for state=%s", state)
-    state_code = _resolve_state_code(state)
+    
+    # First priority: Get districts from the aggregation dataset (most comprehensive and reliable)
     dataset_districts = _dataset_districts_for_state(state)
     if dataset_districts:
-        logger.info("Returning dataset-backed district list for state=%s", state)
+        logger.info("Returning %d dataset-backed districts for state=%s", len(dataset_districts), state)
         return jsonify({"status": "success", "districts": dataset_districts}), 200
-
+    
+    # Second priority: Try WRIS API for this state
+    state_code = _resolve_state_code(state)
     if state_code is None:
+        # If state code can't be resolved, return minimal fallback
         normalized_state = str(state).strip().lower()
-        fallback_districts = FALLBACK_DISTRICTS.get(normalized_state, ["Baleshwar", "Cuttack", "Puri", "Khurda"])
+        fallback_districts = FALLBACK_DISTRICTS.get(normalized_state, ["Unknown District"])
         logger.warning("Could not resolve state code for %s; returning fallback districts", state)
         return jsonify({"status": "success", "districts": fallback_districts}), 200
 
     url = f"{WRIS_API_BASE}/getAllDistrictListDataViewPage/{state_code}/"
     response = _request_wris(url, method='get')
     if response is None:
-        fallback_districts = FALLBACK_DISTRICTS.get(str(state).strip().lower(), ["Baleshwar", "Cuttack", "Puri", "Khurda"])
-        logger.warning("WRIS districts endpoint unavailable; returning fallback districts for %s", state)
-        return jsonify({"status": "success", "districts": fallback_districts}), 200
+        logger.warning("WRIS districts endpoint unavailable for state=%s; no dataset fallback", state)
+        return jsonify({"status": "success", "districts": []}), 200
 
     try:
         payload = response.json()
     except ValueError:
-        fallback_districts = FALLBACK_DISTRICTS.get(str(state).strip().lower(), ["Baleshwar", "Cuttack", "Puri", "Khurda"])
-        logger.warning("WRIS districts response invalid; returning fallback districts for %s", state)
-        return jsonify({"status": "success", "districts": fallback_districts}), 200
+        logger.warning("WRIS districts response invalid for state=%s; no dataset fallback", state)
+        return jsonify({"status": "success", "districts": []}), 200
 
-    districts = _normalize_wris_list(payload, ["district", "District", "districtName", "DistrictName", "name"])
-    if not districts:
-        if dataset_districts:
-            logger.warning("WRIS returned no districts; using dataset-backed districts for %s", state)
-            return jsonify({"status": "success", "districts": dataset_districts}), 200
-        fallback_districts = FALLBACK_DISTRICTS.get(str(state).strip().lower(), ["Baleshwar", "Cuttack", "Puri", "Khurda"])
-        return jsonify({"status": "success", "districts": fallback_districts}), 200
-    return jsonify({"status": "success", "districts": sorted(set(districts))})
+    wris_districts = _normalize_wris_list(payload, ["district", "District", "districtName", "DistrictName", "name"])
+    if wris_districts:
+        logger.info("Returning %d WRIS-backed districts for state=%s", len(wris_districts), state)
+        return jsonify({"status": "success", "districts": sorted(set(wris_districts))}), 200
+    
+    # No data from any source
+    logger.warning("No districts found for state=%s from any source", state)
+    return jsonify({"status": "success", "districts": []}), 200
 
 
 @app.route("/agencies")

@@ -362,6 +362,126 @@ def regime_confusion_matrix(y_true, y_pred, bins, labels):
     )
 
 
+def _fit_tuned_xgboost(X_train, y_train, X_val, y_val):
+    candidate_params = [
+        {
+            "n_estimators": 400,
+            "learning_rate": 0.03,
+            "max_depth": 4,
+            "subsample": 0.8,
+            "colsample_bytree": 0.8,
+            "reg_alpha": 0.0,
+            "reg_lambda": 1.0,
+            "min_child_weight": 3,
+            "gamma": 0.0,
+        },
+        {
+            "n_estimators": 600,
+            "learning_rate": 0.03,
+            "max_depth": 5,
+            "subsample": 0.85,
+            "colsample_bytree": 0.85,
+            "reg_alpha": 0.1,
+            "reg_lambda": 1.0,
+            "min_child_weight": 2,
+            "gamma": 0.1,
+        },
+        {
+            "n_estimators": 800,
+            "learning_rate": 0.02,
+            "max_depth": 6,
+            "subsample": 0.9,
+            "colsample_bytree": 0.9,
+            "reg_alpha": 0.2,
+            "reg_lambda": 2.0,
+            "min_child_weight": 1,
+            "gamma": 0.2,
+        },
+        {
+            "n_estimators": 1000,
+            "learning_rate": 0.01,
+            "max_depth": 6,
+            "subsample": 0.95,
+            "colsample_bytree": 0.95,
+            "reg_alpha": 0.3,
+            "reg_lambda": 2.5,
+            "min_child_weight": 1,
+            "gamma": 0.3,
+        },
+    ]
+
+    best_model = None
+    best_rmse = np.inf
+    best_params = None
+
+    for params in candidate_params:
+        model = XGBRegressor(
+            objective="reg:squarederror",
+            eval_metric="rmse",
+            random_state=42,
+            n_jobs=-1,
+            tree_method="hist",
+            verbosity=0,
+            **params,
+        )
+        try:
+            model.fit(
+                X_train,
+                y_train,
+                eval_set=[(X_val, y_val)],
+                early_stopping_rounds=50,
+                verbose=False,
+            )
+        except Exception:
+            model.fit(X_train, y_train)
+
+        val_pred = model.predict(X_val)
+        rmse = float(np.sqrt(mean_squared_error(y_val, val_pred)))
+        if rmse < best_rmse:
+            best_rmse = rmse
+            best_model = model
+            best_params = params
+
+    if best_model is None:
+        best_model = XGBRegressor(
+            n_estimators=400,
+            learning_rate=0.03,
+            max_depth=4,
+            subsample=0.8,
+            colsample_bytree=0.8,
+            reg_alpha=0.0,
+            reg_lambda=1.0,
+            min_child_weight=3,
+            gamma=0.0,
+            random_state=42,
+            objective="reg:squarederror",
+            n_jobs=-1,
+        )
+        best_model.fit(X_train, y_train)
+
+    final_model = XGBRegressor(
+        objective="reg:squarederror",
+        eval_metric="rmse",
+        random_state=42,
+        n_jobs=-1,
+        tree_method="hist",
+        verbosity=0,
+        **(best_params or {
+            "n_estimators": 400,
+            "learning_rate": 0.03,
+            "max_depth": 4,
+            "subsample": 0.8,
+            "colsample_bytree": 0.8,
+            "reg_alpha": 0.0,
+            "reg_lambda": 1.0,
+            "min_child_weight": 3,
+            "gamma": 0.0,
+        }),
+    )
+    final_model.fit(X_train, y_train)
+    return final_model
+
+
 def train_models(featured, feature_cols, district=None):
     if len(featured) < 20:
         return None
@@ -374,13 +494,7 @@ def train_models(featured, feature_cols, district=None):
     y_train = train_df["groundwater_level"]
     X_test = test_df[feature_cols]
 
-    # FIX 3: define y_test BEFORE fitting XGBoost.
-    # Original used walrus operator `y_test := np.zeros(len(X_test))` inside
-    # the eval_set argument, so XGBoost evaluated its training loss against
-    # all-zero labels. This corrupted the eval metric and caused wrong
-    # early stopping. Now y_test is the real test labels.
     y_test = test_df["groundwater_level"].values
-
     X_full = featured[feature_cols]
 
     rf = RandomForestRegressor(
@@ -393,25 +507,16 @@ def train_models(featured, feature_cols, district=None):
     rf.fit(X_train, y_train)
     rf_pred = rf.predict(X_test)
 
-    xgb_model = XGBRegressor(
-        n_estimators=350,
-        learning_rate=0.04,
-        max_depth=5,
-        subsample=0.85,
-        colsample_bytree=0.85,
-        reg_alpha=0.1,
-        reg_lambda=1.0,
-        random_state=42,
-        objective="reg:squarederror",
-        n_jobs=-1,
-    )
-    # FIX 3: eval_set now uses real y_test, not zeros
-    xgb_model.fit(
-        X_train,
-        y_train,
-        eval_set=[(X_test, y_test)],
-        verbose=False,
-    )
+    if len(train_df) >= 24:
+        split_idx = max(8, int(len(train_df) * 0.8))
+        X_fit = X_train.iloc[:split_idx]
+        y_fit = y_train.iloc[:split_idx]
+        X_val = X_train.iloc[split_idx:]
+        y_val = y_train.iloc[split_idx:]
+        xgb_model = _fit_tuned_xgboost(X_fit, y_fit, X_val, y_val)
+    else:
+        xgb_model = _fit_tuned_xgboost(X_train, y_train, X_train.iloc[:max(4, len(X_train) // 2)], y_train.iloc[:max(4, len(y_train) // 2)])
+
     xgb_pred = xgb_model.predict(X_test)
 
     # Persistence: predict last training value for all test steps
