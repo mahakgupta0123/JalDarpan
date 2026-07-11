@@ -45,6 +45,8 @@ FALLBACK_DISTRICTS = {
 FALLBACK_AGENCIES = ["CGWB", "State DW", "Central Ground Water Board"]
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 AGGREGATION_DATASET = os.path.join(PROJECT_ROOT, "aggregation_outputs", "cleaned_dataset_used_for_aggregation.csv")
+RESEARCH_METRICS_APPEND_CSV = os.path.join(PROJECT_ROOT, "research_metrics_append.csv")
+EXCLUDED_DISTRICTS_CSV = os.path.join(PROJECT_ROOT, "aggregation_outputs", "excluded_districts.csv")
 
 
 def _normalize_key(value):
@@ -71,20 +73,45 @@ def _load_dataset_states():
 
 @functools.lru_cache(maxsize=1)
 def _load_dataset_district_map():
-    if not os.path.exists(AGGREGATION_DATASET):
-        return {}
-
-    try:
-        frame = pd.read_csv(AGGREGATION_DATASET, usecols=["state", "district"])
-    except Exception as exc:
-        logger.warning("Could not load aggregation dataset for district fallback: %s", exc)
-        return {}
-
     district_map = {}
-    for state_name, group in frame.dropna(subset=["state", "district"]).groupby("state"):
-        districts = sorted({str(value).strip() for value in group["district"] if str(value).strip()})
-        if districts:
-            district_map[_normalize_key(state_name)] = districts
+
+    def _add_districts_from_frame(frame, source_name):
+        if frame is None or frame.empty:
+            return
+        try:
+            subset = frame[["state", "district"]].copy()
+        except Exception:
+            return
+        for state_name, group in subset.dropna(subset=["state", "district"]).groupby("state"):
+            districts = sorted({str(value).strip() for value in group["district"] if str(value).strip()})
+            if not districts:
+                continue
+            normalized_state = _normalize_key(state_name)
+            existing = district_map.setdefault(normalized_state, [])
+            merged = sorted(set(existing) | set(districts))
+            district_map[normalized_state] = merged
+
+    if os.path.exists(AGGREGATION_DATASET):
+        try:
+            frame = pd.read_csv(AGGREGATION_DATASET, usecols=["state", "district"])
+            _add_districts_from_frame(frame, "aggregation")
+        except Exception as exc:
+            logger.warning("Could not load aggregation dataset for district fallback: %s", exc)
+
+    if os.path.exists(RESEARCH_METRICS_APPEND_CSV):
+        try:
+            frame = pd.read_csv(RESEARCH_METRICS_APPEND_CSV, usecols=["state", "district"])
+            _add_districts_from_frame(frame, "research_metrics")
+        except Exception as exc:
+            logger.warning("Could not load research metrics CSV for district fallback: %s", exc)
+
+    if os.path.exists(EXCLUDED_DISTRICTS_CSV):
+        try:
+            frame = pd.read_csv(EXCLUDED_DISTRICTS_CSV, usecols=["state", "district"])
+            _add_districts_from_frame(frame, "excluded_districts")
+        except Exception as exc:
+            logger.warning("Could not load excluded districts CSV for district fallback: %s", exc)
+
     return district_map
 
 

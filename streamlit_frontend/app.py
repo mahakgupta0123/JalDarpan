@@ -1664,6 +1664,25 @@ def describe_xai_meaning(feature_cols, shap_values):
     }
 
 
+def build_district_model_metrics_table(trained):
+    metrics_frame = trained.get("metrics") if isinstance(trained, dict) else None
+    if metrics_frame is None or getattr(metrics_frame, "empty", True):
+        return pd.DataFrame(columns=["Model", "RMSE", "MAE", "MAPE", "R2", "NSE", "NRMSE", "Regime Acc", "Regime Coverage", "Regime Majority Share", "Regime Valid"])
+
+    table = metrics_frame.reset_index()
+    if "index" in table.columns:
+        table = table.rename(columns={"index": "Model"})
+    elif "Model" not in table.columns:
+        table.insert(0, "Model", [str(idx) for idx in range(len(table))])
+
+    display_cols = ["Model"]
+    for column in ["RMSE", "MAE", "MAPE", "R2", "NSE", "NRMSE", "Regime Acc", "Regime Coverage", "Regime Majority Share", "Regime Valid"]:
+        if column in table.columns:
+            display_cols.append(column)
+
+    return table[display_cols].copy()
+
+
 def load_local_district_reference():
     ref_path = os.path.join(parent_dir, "aggregation_outputs", "cleaned_dataset_used_for_aggregation.csv")
     if not os.path.exists(ref_path):
@@ -1707,6 +1726,16 @@ def render_district_level_home_tab(state, district, featured, forecast_df, train
         st.metric("Forecasted level", f"{forecasted_level:.2f}", delta=f"{forecasted_level - latest_level:.2f} vs current")
     with col3:
         st.metric("Anomaly density", f"{anomaly_density_pct:.2f}%", delta="flagged readings")
+
+    st.divider()
+
+    st.subheader("District-level model metrics")
+    metrics_table = build_district_model_metrics_table(trained)
+    if metrics_table.empty:
+        st.info("No district-level model metrics are available yet for this selection.")
+    else:
+        st.caption("Comparison of Persistence, Random Forest, and XGBoost for the current district split.")
+        st.dataframe(metrics_table, use_container_width=True, hide_index=True)
 
     st.divider()
 
